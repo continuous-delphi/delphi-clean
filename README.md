@@ -135,6 +135,8 @@ pwsh -File .\delphi-clean.ps1 -ExcludeDirectories .git,.vs,.idea
 
 ## Profiles
 
+- see: [/docs/build-profiles.md](/docs/build-profiles.md) for breakdown of each profile
+
 ### lite (default)
 
 Safe cleanup of common transient files.
