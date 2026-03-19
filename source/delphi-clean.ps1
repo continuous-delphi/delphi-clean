@@ -1,8 +1,8 @@
-#requires -Version 7.0
+#requires -Version 5.1
 
 <#
 .SYNOPSIS
-Cleans Delphi build artifacts from a repository tree running in 3 different modes.
+Cleans Delphi build artifacts from a repository tree using three cleanup profiles.
 
 .DESCRIPTION
 Runs from the tools location and targets the parent directory by default.
@@ -13,16 +13,22 @@ Supports three cleanup profiles:
   full  - aggressive cleanup including user-local IDE state files
 
 .EXAMPLE
-pwsh -File .\delphi-clean.ps1
+powershell.exe -File .\delphi-clean.ps1
 
 .EXAMPLE
-pwsh -File .\delphi-clean.ps1 -Profile build
+powershell.exe -File .\delphi-clean.ps1 -Profile build
 
 .EXAMPLE
-pwsh -File .\delphi-clean.ps1 -Profile full -Verbose
+powershell.exe -File .\delphi-clean.ps1 -Profile full -Verbose
 
 .EXAMPLE
-pwsh -File .\delphi-clean.ps1 -Profile full -WhatIf
+powershell.exe -File .\delphi-clean.ps1 -Profile full -WhatIf
+
+.EXAMPLE
+powershell.exe -File .\delphi-clean.ps1 -Profile build -PassThru
+
+.EXAMPLE
+powershell.exe -File .\delphi-clean.ps1 -Profile build -Json
 #>
 
 [CmdletBinding(SupportsShouldProcess)]
@@ -39,7 +45,13 @@ param(
         '.git',
         '.vs',
         '.claude'
-    )
+    ),
+
+    [Parameter()]
+    [switch]$PassThru,
+
+    [Parameter()]
+    [switch]$Json
 )
 
 Set-StrictMode -Version Latest
@@ -51,10 +63,42 @@ function Write-Section {
         [string]$Message
     )
 
+    if ($Json) {
+        return
+    }
+
     Write-Host ''
     Write-Host ('=' * 70)
     Write-Host $Message
     Write-Host ('=' * 70)
+}
+
+function Get-RelativePathCompat {
+    param(
+        [Parameter(Mandatory)]
+        [string]$BasePath,
+
+        [Parameter(Mandatory)]
+        [string]$TargetPath
+    )
+
+    $baseFull = [System.IO.Path]::GetFullPath($BasePath)
+    $targetFull = [System.IO.Path]::GetFullPath($TargetPath)
+
+    if (-not $baseFull.EndsWith([string][System.IO.Path]::DirectorySeparatorChar)) {
+        $baseFull += [string][System.IO.Path]::DirectorySeparatorChar
+    }
+
+    $baseUri = New-Object System.Uri($baseFull)
+    $targetUri = New-Object System.Uri($targetFull)
+    $relativeUri = $baseUri.MakeRelativeUri($targetUri)
+    $relativePath = [System.Uri]::UnescapeDataString($relativeUri.ToString()) -replace '/', [System.IO.Path]::DirectorySeparatorChar
+
+    if ([string]::IsNullOrWhiteSpace($relativePath)) {
+        return '.'
+    }
+
+    return $relativePath
 }
 
 function Resolve-CleanRoot {
@@ -72,6 +116,29 @@ function Resolve-CleanRoot {
     return $resolvedInput.Path
 }
 
+function Test-SafeCleanRoot {
+    param(
+        [Parameter(Mandatory)]
+        [string]$Root
+    )
+
+    $fullRoot = [System.IO.Path]::GetFullPath($Root)
+    $rootOfRoot = [System.IO.Path]::GetPathRoot($fullRoot)
+
+    if ($fullRoot -eq $rootOfRoot) {
+        throw "Refusing to clean an unsafe root path: $fullRoot"
+    }
+
+    $resolved = Resolve-Path -LiteralPath $fullRoot
+    if (-not $resolved) {
+      throw "Invalid root path: $fullRoot"
+    }
+
+    if ($fullRoot.TrimEnd([char[]]@('\','/')).Length -lt 4) {
+        throw "Refusing to clean an unsafe root path: $fullRoot"
+    }
+}
+
 function Test-PathUnderExcludedDirectory {
     param(
         [Parameter(Mandatory)]
@@ -84,7 +151,7 @@ function Test-PathUnderExcludedDirectory {
         [string[]]$ExcludedDirectoryNames
     )
 
-    $relative = [System.IO.Path]::GetRelativePath($Root, $FullName)
+    $relative = Get-RelativePathCompat -BasePath $Root -TargetPath $FullName
 
     if ($relative -eq '.') {
         return $false
@@ -92,7 +159,7 @@ function Test-PathUnderExcludedDirectory {
 
     $parts = $relative -split '[\\/]'
     foreach ($part in $parts) {
-        if ($ExcludedDirectoryNames -contains $part) {
+        if ($ExcludedDirectoryNames -icontains $part) {
             return $true
         }
     }
@@ -236,22 +303,23 @@ function Get-FilesToDelete {
         [string[]]$ExcludedDirectoryNames
     )
 
-    $all = New-Object System.Collections.Generic.List[System.IO.FileInfo]
+    Write-Verbose 'Scanning for matching files.'
 
-    foreach ($pattern in $Patterns) {
-        Write-Verbose "Scanning for files matching pattern: $pattern"
-
-        $matches = Get-ChildItem -Path $Root -Recurse -File -Filter $pattern -Force -ErrorAction SilentlyContinue |
-            Where-Object {
-                -not (Test-PathUnderExcludedDirectory -FullName $_.FullName -Root $Root -ExcludedDirectoryNames $ExcludedDirectoryNames)
-            }
-
-        foreach ($match in $matches) {
-            $all.Add($match)
+    $allFiles = Get-ChildItem -Path $Root -Recurse -File -Force -ErrorAction SilentlyContinue |
+        Where-Object {
+            -not (Test-PathUnderExcludedDirectory -FullName $_.FullName -Root $Root -ExcludedDirectoryNames $ExcludedDirectoryNames)
         }
-    }
 
-    $all |
+    $allFiles |
+        Where-Object {
+            $file = $_
+            foreach ($pattern in $Patterns) {
+                if ($file.Name -like $pattern) {
+                    return $true
+                }
+            }
+            return $false
+        } |
         Sort-Object -Property FullName -Unique
 }
 
@@ -267,143 +335,214 @@ function Get-DirectoriesToDelete {
         [string[]]$ExcludedDirectoryNames
     )
 
-    $all = New-Object System.Collections.Generic.List[System.IO.DirectoryInfo]
+    Write-Verbose 'Scanning for matching directories.'
 
+    $nameSet = @{}
     foreach ($dirName in $DirectoryNames) {
-        Write-Verbose "Scanning for directories named: $dirName"
-
-        $matches = Get-ChildItem -Path $Root -Recurse -Directory -Force -ErrorAction SilentlyContinue |
-            Where-Object {
-                $_.Name -ieq $dirName -and
-                -not (Test-PathUnderExcludedDirectory -FullName $_.FullName -Root $Root -ExcludedDirectoryNames $ExcludedDirectoryNames)
-            }
-
-        foreach ($match in $matches) {
-            $all.Add($match)
-        }
+        $nameSet[$dirName.ToUpperInvariant()] = $true
     }
 
-    $all |
+    Get-ChildItem -Path $Root -Recurse -Directory -Force -ErrorAction SilentlyContinue |
+        Where-Object {
+            $nameSet.ContainsKey($_.Name.ToUpperInvariant()) -and
+            -not (Test-PathUnderExcludedDirectory -FullName $_.FullName -Root $Root -ExcludedDirectoryNames $ExcludedDirectoryNames)
+        } |
         Sort-Object -Property FullName -Unique |
         Sort-Object -Property { $_.FullName.Length } -Descending
+}
+
+function New-DeletionRecord {
+    param(
+        [Parameter(Mandatory)]
+        [ValidateSet('File', 'Directory')]
+        [string]$Type,
+
+        [Parameter(Mandatory)]
+        [string]$Path,
+
+        [Parameter(Mandatory)]
+        [bool]$Deleted
+    )
+
+    [PSCustomObject]@{
+        Type    = $Type
+        Path    = $Path
+        Deleted = $Deleted
+    }
 }
 
 function Remove-TargetFiles {
     [CmdletBinding(SupportsShouldProcess = $true)]
     param(
         [System.IO.FileInfo[]]$Files = @(),
-        [switch]$ShowDeletedItems
+        [switch]$ReturnRecords
     )
 
-    if (@($Files).Count -eq 0) {
-        return 0
+    $result = [PSCustomObject]@{
+        DeletedCount = 0
+        Records      = New-Object System.Collections.Generic.List[object]
     }
 
-    $deleted = 0
+    if (@($Files).Count -eq 0) {
+        return $result
+    }
 
     foreach ($file in $Files) {
+        Write-Verbose "Evaluating file: $($file.FullName)"
+
         if ($PSCmdlet.ShouldProcess($file.FullName, 'Delete file')) {
             try {
-                Remove-Item -LiteralPath $file.FullName -Force -ErrorAction Stop -WhatIf:$WhatIfPreference
+                Remove-Item -LiteralPath $file.FullName -Force -ErrorAction Stop
+                $result.DeletedCount++
+                Write-Host "Deleted file: $($file.FullName)"
 
-                if ($ShowDeletedItems) {
-                    Write-Host "Deleted file: $($file.FullName)"
-                }
-                else {
-                    Write-Host "Deleted file: $($file.FullName)"
-                }
-
-                if (-not $WhatIfPreference) {
-                    $deleted++
+                if ($ReturnRecords) {
+                    $result.Records.Add((New-DeletionRecord -Type File -Path $file.FullName -Deleted $true))
                 }
             }
             catch {
                 Write-Warning "Failed to delete file: $($file.FullName)"
-                Write-Warning $_.Exception.Message
+                Write-Error -ErrorRecord $_
             }
+        }
+        elseif ($ReturnRecords -and $WhatIfPreference) {
+            $result.Records.Add((New-DeletionRecord -Type File -Path $file.FullName -Deleted $false))
         }
     }
 
-    return $deleted
+    return $result
 }
 
 function Remove-TargetDirectories {
     [CmdletBinding(SupportsShouldProcess = $true)]
     param(
         [System.IO.DirectoryInfo[]]$Directories = @(),
-        [switch]$ShowDeletedItems
+        [switch]$ReturnRecords
     )
 
-    if (@($Directories).Count -eq 0) {
-        return 0
+    $result = [PSCustomObject]@{
+        DeletedCount = 0
+        Records      = New-Object System.Collections.Generic.List[object]
     }
 
-    $deleted = 0
+    if (@($Directories).Count -eq 0) {
+        return $result
+    }
 
     foreach ($dir in $Directories) {
         if (-not (Test-Path -LiteralPath $dir.FullName)) {
             continue
         }
 
+        Write-Verbose "Evaluating directory: $($dir.FullName)"
+
         if ($PSCmdlet.ShouldProcess($dir.FullName, 'Delete directory')) {
             try {
-                Remove-Item -LiteralPath $dir.FullName -Recurse -Force -ErrorAction Stop -WhatIf:$WhatIfPreference
+                Remove-Item -LiteralPath $dir.FullName -Recurse -Force -ErrorAction Stop
+                $result.DeletedCount++
+                Write-Host "Deleted directory: $($dir.FullName)"
 
-                if ($ShowDeletedItems) {
-                    Write-Host "Deleted directory: $($dir.FullName)"
-                }
-                else {
-                    Write-Host "Deleted directory: $($dir.FullName)"
-                }
-
-                if (-not $WhatIfPreference) {
-                    $deleted++
+                if ($ReturnRecords) {
+                    $result.Records.Add((New-DeletionRecord -Type Directory -Path $dir.FullName -Deleted $true))
                 }
             }
             catch {
                 Write-Warning "Failed to delete directory: $($dir.FullName)"
-                Write-Warning $_.Exception.Message
+                Write-Error -ErrorRecord $_
             }
+        }
+        elseif ($ReturnRecords -and $WhatIfPreference) {
+            $result.Records.Add((New-DeletionRecord -Type Directory -Path $dir.FullName -Deleted $false))
         }
     }
 
-    return $deleted
+    return $result
 }
 
 try {
     $cleanRoot = Resolve-CleanRoot -InputRoot $RootPath
-    $definition = Get-ProfileDefinition -Name $Profile
+    Test-SafeCleanRoot -Root $cleanRoot
 
-    Write-Section "Delphi Cleanup"
-    Write-Host "Profile      : $Profile"
-    Write-Host "Root         : $cleanRoot"
-    Write-Host "Excluded dirs: $($ExcludeDirectories -join ', ')"
-    Write-Host "WhatIf mode    : $WhatIfPreference"
+    $definition = Get-ProfileDefinition -Name $Profile
+    $mode = if ($WhatIfPreference) { 'WhatIf (no changes)' } else { 'Execute' }
+    $returnRecords = ($PassThru -or $Json)
+
+    Write-Section 'Delphi Clean'
+
+    if (-not $Json) {
+        Write-Host ('Profile         : {0}' -f $Profile)
+        Write-Host ('Root            : {0}' -f $cleanRoot)
+        Write-Host ('Excluded dirs   : {0}' -f ($ExcludeDirectories -join ', '))
+        Write-Host ('Mode            : {0}' -f $mode)
+    }
 
     $filesToDelete = @(Get-FilesToDelete -Root $cleanRoot -Patterns $definition.FilePatterns -ExcludedDirectoryNames $ExcludeDirectories)
     $dirsToDelete  = @(Get-DirectoriesToDelete -Root $cleanRoot -DirectoryNames $definition.DirectoryNames -ExcludedDirectoryNames $ExcludeDirectories)
 
-    Write-Host ''
-    Write-Host "Files found      : $($filesToDelete.Count)"
-    Write-Host "Directories found: $($dirsToDelete.Count)"
+    if (-not $Json) {
+        Write-Host ''
+        Write-Host ('Files found      : {0}' -f $filesToDelete.Count)
+        Write-Host ('Directories found: {0}' -f $dirsToDelete.Count)
+    }
 
     if (($filesToDelete.Count -eq 0) -and ($dirsToDelete.Count -eq 0)) {
-        Write-Host ''
-        Write-Host 'Nothing to clean.'
+
+        if ($Json) {
+            [PSCustomObject]@{
+                Profile            = $Profile
+                Root               = $cleanRoot
+                ExcludedDirectories = @($ExcludeDirectories)
+                Mode               = $mode
+                FilesFound         = 0
+                DirectoriesFound   = 0
+                FilesDeleted       = 0
+                DirectoriesDeleted = 0
+                Items              = @()
+            } | ConvertTo-Json -Depth 5
+        }
+        else {
+            Write-Host ''
+            Write-Host 'Nothing to clean.'
+        }
+
         exit 0
     }
 
-    Write-Section "Cleaning"
-    $deletedFileCount = Remove-TargetFiles -Files $filesToDelete
-    $deletedDirCount  = Remove-TargetDirectories -Directories $dirsToDelete
+    Write-Section 'Cleaning'
+    $fileRemovalResult = Remove-TargetFiles -Files $filesToDelete -ReturnRecords:$returnRecords
+    $dirRemovalResult  = Remove-TargetDirectories -Directories $dirsToDelete -ReturnRecords:$returnRecords
 
-    Write-Section "Summary"
-    Write-Host "Files deleted      : $deletedFileCount"
-    Write-Host "Directories deleted: $deletedDirCount"
+    #$allRecords = @($fileRemovalResult.Records) + @($dirRemovalResult.Records)
+    $allRecords = New-Object System.Collections.Generic.List[object]
+    $allRecords.AddRange([object[]]$fileRemovalResult.Records)
+    $allRecords.AddRange([object[]]$dirRemovalResult.Records)
+
+    if ($Json) {
+        [PSCustomObject]@{
+            Profile             = $Profile
+            Root                = $cleanRoot
+            ExcludedDirectories = @($ExcludeDirectories)
+            Mode                = $mode
+            FilesFound          = $filesToDelete.Count
+            DirectoriesFound    = $dirsToDelete.Count
+            FilesDeleted        = $fileRemovalResult.DeletedCount
+            DirectoriesDeleted  = $dirRemovalResult.DeletedCount
+            Items               = $allRecords
+        } | ConvertTo-Json -Depth 5
+    }
+    else {
+        Write-Section 'Summary'
+        Write-Host ('Files deleted      : {0}' -f $fileRemovalResult.DeletedCount)
+        Write-Host ('Directories deleted: {0}' -f $dirRemovalResult.DeletedCount)
+    }
+
+    if ($PassThru -and -not $Json) {
+        $allRecords
+    }
 
     exit 0
 }
 catch {
-    Write-Error $_.Exception.Message
+    Write-Error -ErrorRecord $_
     exit 1
 }
