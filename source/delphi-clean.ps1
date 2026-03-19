@@ -174,120 +174,104 @@ function Get-ProfileDefinition {
         [string]$Name
     )
 
+    # --- base (lite) ---
+    $liteFiles = @(
+        '*.dcu',
+        '*.identcache',
+        '*.bak',
+        '*.tmp',
+        '*.dsk',
+        '*.tvsconfig',
+        '*.stat'
+    )
+
+    $liteDirs = @(
+        '__history'
+    )
+
+    # --- build additions ---
+    $buildFilesExtra = @(
+        '*.local',
+        '*.dproj.local',
+        '*.groupproj.local',
+        '*.projdata',
+        '*.drc',
+        '*.map',
+        '*.rsm',
+        '*.tds',
+        '*.bpl',
+        '*.dcp',
+        '*.bpi',
+        '*.so',
+        '*.dll',
+        '*.exe',
+        '*.obj',
+        '*.hpp',
+        '*.dres',
+        '*.ilc',
+        '*.ild',
+        '*.ilf',
+        '*.ipu',
+        '*.ddp',
+        '*.prjmgc',
+        '*.vlb',
+        'dunitx-results.xml'
+    )
+
+    $buildDirsExtra = @(
+        'Win32',
+        'Win64',
+        'Debug',
+        'Release',
+        'OSX64',
+        'OSXARM64',
+        'Android',
+        'Android64',
+        'iOSDevice64',
+        'Linux64',
+        'TMSWeb'
+    )
+
+    # --- full additions ---
+    $fullFilesExtra = @(
+        '*.~*',
+        '*.lib',
+        '*.fbpInf',
+        '*.fbl8',
+        '*.fbpbrk',
+        '*.fb8lck',
+        'TestInsightSettings.ini'
+    )
+
+    $fullDirsExtra = @(
+        '__recovery/'
+    )
+
+    # --- compose ---
     switch ($Name) {
         'lite' {
-            @{
-                FilePatterns = @(
-                    '*.dcu',
-                    '*.identcache',
-                    '*.bak',
-                    '*.tmp',
-                    '*.dsk',
-                    '*.tvsconfig',
-                    '*.stat'
-                )
-                DirectoryNames = @(
-                    '__history'
-                )
-            }
+            $files = $liteFiles
+            $dirs  = $liteDirs
         }
 
         'build' {
-            @{
-                FilePatterns = @(
-                    '*.bak',
-                    '*.tmp',
-                    '*.dcu',
-                    '*.ddp',
-                    '*.dsk',
-                    '*.identcache',
-                    '*.local',
-                    '*.tvsconfig',
-                    '*.dproj.local',
-                    '*.groupproj.local',
-                    '*.drc',
-                    '*.map',
-                    '*.rsm',
-                    '*.tds',
-                    '*.bpl',
-                    '*.dcp',
-                    '*.bpi',
-                    '*.dll',
-                    '*.exe',
-                    '*.obj',
-                    '*.hpp',
-                    '*.ilc',
-                    '*.ild',
-                    '*.ilf',
-                    '*.ipu',
-                    '*.~bpg',
-                    '*.~dsk',
-                    '*.~pas',
-                    '*.~dfm',
-                    '*.~ddp',
-                    '*.~dpr'
-                )
-                DirectoryNames = @(
-                    '__history',
-                    'Win32',
-                    'Win64',
-                    'Debug',
-                    'Release',
-                    'dcu'
-                )
-            }
+            $files = $liteFiles + $buildFilesExtra
+            $dirs  = $liteDirs + $buildDirsExtra
         }
 
         'full' {
-            @{
-                FilePatterns = @(
-                    '*.bak',
-                    '*.tmp',
-                    '*.dcu',
-                    '*.ddp',
-                    '*.dsk',
-                    '*.identcache',
-                    '*.local',
-                    '*.tvsconfig',
-                    '*.dproj.local',
-                    '*.groupproj.local',
-                    '*.drc',
-                    '*.map',
-                    '*.rsm',
-                    '*.tds',
-                    '*.bpl',
-                    '*.dcp',
-                    '*.bpi',
-                    '*.lib',
-                    '*.dll',
-                    '*.exe',
-                    '*.obj',
-                    '*.hpp',
-                    '*.ilc',
-                    '*.ild',
-                    '*.ilf',
-                    '*.ipu',
-                    '*.~bpg',
-                    '*.~dsk',
-                    '*.~pas',
-                    '*.~dfm',
-                    '*.~ddp',
-                    '*.~dpr'
-                )
-                DirectoryNames = @(
-                    '__history',
-                    'Win32',
-                    'Win64',
-                    'Debug',
-                    'Release',
-                    'dcu'
-                )
-            }
+            $files = $liteFiles + $buildFilesExtra + $fullFilesExtra
+            $dirs  = $liteDirs + $buildDirsExtra + $fullDirsExtra
         }
+    }
 
-        default {
-            throw "Unsupported profile: $Name"
-        }
+    # --- dedupe ---
+    $files = $files | Sort-Object -Unique
+    $dirs  = $dirs  | Sort-Object -Unique
+
+    return @{
+        FilePatterns  = $files
+        DirectoryNames = $dirs
     }
 }
 
