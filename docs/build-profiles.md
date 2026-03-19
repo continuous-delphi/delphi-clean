@@ -10,11 +10,12 @@ Each profile is cumulative:
 
 ---
 
-## lite
+## `lite` (default)
 
 Safe cleanup of common transient files.
 
 ### Files
+
 - `*.dcu`
 - `*.identcache`
 - `*.bak`
@@ -24,15 +25,17 @@ Safe cleanup of common transient files.
 - `*.stat`
 
 ### Directories
+
 - `__history`
 
 ---
 
-## build (default)
+## `build`
 
 Includes everything in `lite`, plus the following additional items.
 
 ### Additional Files
+
 - `*.local`
 - `*.dproj.local`
 - `*.groupproj.local`
@@ -59,6 +62,7 @@ Includes everything in `lite`, plus the following additional items.
 - `dunitx-results.xml`
 
 ### Additional Directories
+
 - `Win32`
 - `Win64`
 - `Debug`
@@ -73,11 +77,12 @@ Includes everything in `lite`, plus the following additional items.
 
 ---
 
-## full
+## `full`
 
 Includes everything in `build`, plus the following additional items.
 
 ### Additional Files
+
 - `*.~*`
 - `*.lib`
 - `*.fbpInf`
@@ -88,12 +93,5 @@ Includes everything in `build`, plus the following additional items.
 
 
 ### Additional Directories
+
 - `__recovery`
-
----
-
-## Notes
-
-- All profiles respect excluded directories such as `.git`, `.vs`, and `.claude`.
-- `build` is the recommended default for daily use and CI.
-- `full` is intended for more aggressive resets when additional local artifacts should be removed.

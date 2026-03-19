@@ -35,7 +35,7 @@ powershell.exe -File .\delphi-clean.ps1 -Profile build -Json
 param(
     [Parameter()]
     [ValidateSet('lite', 'build', 'full')]
-    [string]$Profile = 'build',
+    [string]$Profile = 'lite',
 
     [Parameter()]
     [string]$RootPath,

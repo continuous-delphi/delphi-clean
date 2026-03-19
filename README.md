@@ -41,7 +41,8 @@ pwsh -File .\delphi-clean.ps1 -Profile build -Json
 
 ## PowerShell Compatibility
 
-Runs on the widely available Windows PowerShell 5.1 (powershell.exe) and the newer PowerShell 7+ (pwsh).
+Runs on the widely available Windows PowerShell 5.1 (powershell.exe)
+and the newer PowerShell 7+ (pwsh).
 
 ---
 
@@ -56,7 +57,8 @@ pwsh -File .\delphi-clean.ps1
 ```
 
 Defaults to:
-- Profile: `build`
+
+- Profile: `lite`
 - Root: parent directory of the script
 
 ---
@@ -114,6 +116,7 @@ pwsh -File .\delphi-clean.ps1 -Json
 ```
 
 Outputs a JSON summary including:
+
 - Files found
 - Directories found
 - Files deleted
@@ -132,45 +135,38 @@ pwsh -File .\delphi-clean.ps1 -ExcludeDirectories .git,.vs,.idea
 
 ## Profiles
 
-### lite
+### lite (default)
 
 Safe cleanup of common transient files.
 
 Includes:
+
 - `.dcu`, `.tmp`, `.bak`, `.identcache`
 - `__history`
 
-Use when:
-- You want minimal disruption
-- Day-to-day cleanup
-
 ---
 
-### build (default)
+### build
 
 Removes build outputs and generated artifacts.
 
-Includes:
+Includes everything in `lite`, plus:
+
 - Compiled binaries (`.exe`, `.dll`, `.bpl`, etc.)
 - Debug and release folders
 - Intermediate files
-
-Use when:
-- Preparing for a clean build
-- CI pipelines
 
 ---
 
 ### full
 
-Aggressive cleanup including user-local IDE state.
+More aggressive cleanup
 
 Includes everything in `build`, plus:
-- Additional local/project state files
-- Extended artifact coverage
 
-Use when:
-- Resetting a repo to near-pristine state
+- Backup files (`*.~*`)
+- FinalBuilder related files (logs, breakpoint, lock)
+- TestInsight custom settings
 
 ---
 
@@ -183,9 +179,9 @@ It will graduate to `stable` once:
 
 Until graduation, breaking changes may occur
 
-
 ## Continuous-Delphi
 
-This tool is part of the [Continuous-Delphi](https://github.com/continuous-delphi) ecosystem, focused on improving engineering discipline for long-lived Delphi systems.
+This tool is part of the [Continuous-Delphi](https://github.com/continuous-delphi)
+ecosystem, focused on improving engineering discipline for long-lived Delphi systems.
 
 ![continuous-delphi logo](https://continuous-delphi.github.io/assets/logos/continuous-delphi-480x270.png)
