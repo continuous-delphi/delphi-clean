@@ -18,13 +18,13 @@
             './source/delphi-clean.ps1'
         )
         OutputFormat = 'JaCoCo'
-        OutputPath = './tests/results/coverage.xml'
+        OutputPath = './tests/pwsh/results/coverage.xml'
     }
 
     TestResult = @{
         Enabled = $true
         OutputFormat = 'NUnitXml'
-        OutputPath = './tests/results/pester-results.xml'
+        OutputPath = './tests/pwsh/results/pester-results.xml'
     }
 
     Output = @{
