@@ -57,6 +57,8 @@ param(
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 
+$script:Version = '0.1.0'
+
 function Write-Section {
     param(
         [Parameter(Mandatory)]
