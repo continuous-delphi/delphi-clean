@@ -1,0 +1,82 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+concurrency:
+  group: tests-refs/heads/${{ github.event.repository.default_branch }}
+  cancel-in-progress: true
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      # Tag validation runs before checkout -- no workspace is needed for this check.
+      # The glob above is intentionally loose; this step is the authoritative gate.
+      - name: Validate tag format
+        shell: bash
+        run: |
+          if [[ ! "${GITHUB_REF_NAME}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "Tag '${GITHUB_REF_NAME}' does not match required format vX.Y.Z"
+            exit 1
+          fi
+
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Install Pester and PSScriptAnalyzer
+        run: |
+          pwsh -Command "Install-Module Pester -MinimumVersion 5.7.0 -Force -Scope CurrentUser"
+          pwsh -Command "Install-Module PSScriptAnalyzer -Force -Scope CurrentUser"
+
+      - name: Run tests
+        shell: pwsh
+        env:
+          TERM: dumb
+          NO_COLOR: "1"
+        run: |
+          $PSStyle.OutputRendering = 'PlainText'
+          ./tests/run-tests.ps1
+
+      - name: Extract version from tag
+        shell: bash
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          echo "VERSION=${VERSION}" >> "$GITHUB_ENV"
+
+      - name: Populate release notes
+        shell: bash
+        run: |
+          if [[ ! -f .github/RELEASE_TEMPLATE.md ]]; then
+            echo "ERROR: Missing .github/RELEASE_TEMPLATE.md"
+            exit 1
+          fi
+
+          CHANGELOG_SECTION=$(awk '/^## \['"${VERSION}"'\]/{found=1; next} /^## \[/{if(found) exit} found' CHANGELOG.md)
+
+          if [[ -z "${CHANGELOG_SECTION}" ]]; then
+            echo "ERROR: No entry for version ${VERSION} found in CHANGELOG.md"
+            exit 1
+          fi
+
+          sed "s/vX\.Y\.Z/v${VERSION}/g; s/X\.Y\.Z/${VERSION}/g" \
+            .github/RELEASE_TEMPLATE.md > release-notes.md
+
+          printf '\n---\n\n# Change Log\n\n%s\n' "${CHANGELOG_SECTION}" >> release-notes.md
+
+      - name: Create GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          REPO_NAME="${GITHUB_REPOSITORY##*/}"
+          gh release create "${GITHUB_REF_NAME}" \
+            --title "${REPO_NAME} v${VERSION}" \
+            --notes-file release-notes.md \
+            source/delphi-clean.ps1
