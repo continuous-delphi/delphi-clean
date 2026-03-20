@@ -22,7 +22,7 @@
     }
 
     TestResult = @{
-        Enabled = $false
+        Enabled = $true
         OutputFormat = 'NUnitXml'
         OutputPath = './tests/results/pester-results.xml'
     }
