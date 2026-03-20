@@ -3,6 +3,11 @@
 All notable changes to this project will be documented in this file.
 
 ---
+## [0.2.0] Unreleased
+
+- Code review change:
+  - Write-Host changed to Write-Information
+  - Fix: remove trailing slash after `__recovery/`
 
 ## [0.1.0] 2026-03-19
 

@@ -57,7 +57,7 @@ param(
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 
-$script:Version = '0.1.0'
+$script:Version = '0.2.0'
 
 function Write-Section {
     param(
@@ -246,7 +246,7 @@ function Get-LevelDefinition {
     )
 
     $fullDirsExtra = @(
-        '__recovery/'
+        '__recovery'
     )
 
     # --- compose ---
@@ -456,19 +456,19 @@ try {
     Write-Section 'Delphi Clean'
 
     if (-not $Json) {
-        Write-Output ('Level           : {0}' -f $Level)
-        Write-Output ('Root            : {0}' -f $cleanRoot)
-        Write-Output ('Excluded dirs   : {0}' -f ($ExcludeDirectories -join ', '))
-        Write-Output ('Mode            : {0}' -f $mode)
+        Write-Information ('Level           : {0}' -f $Level) -InformationAction Continue
+        Write-Information ('Root            : {0}' -f $cleanRoot) -InformationAction Continue
+        Write-Information ('Excluded dirs   : {0}' -f ($ExcludeDirectories -join ', ')) -InformationAction Continue
+        Write-Information ('Mode            : {0}' -f $mode) -InformationAction Continue
     }
 
     $filesToDelete = @(Get-FilesToDelete -Root $cleanRoot -Patterns $definition.FilePatterns -ExcludedDirectoryNames $ExcludeDirectories)
     $dirsToDelete  = @(Get-DirectoriesToDelete -Root $cleanRoot -DirectoryNames $definition.DirectoryNames -ExcludedDirectoryNames $ExcludeDirectories)
 
     if (-not $Json) {
-        Write-Output ''
-        Write-Output ('Files found      : {0}' -f $filesToDelete.Count)
-        Write-Output ('Directories found: {0}' -f $dirsToDelete.Count)
+        Write-Information '' -InformationAction Continue
+        Write-Information ('Files found      : {0}' -f $filesToDelete.Count) -InformationAction Continue
+        Write-Information ('Directories found: {0}' -f $dirsToDelete.Count) -InformationAction Continue
     }
 
     if (($filesToDelete.Count -eq 0) -and ($dirsToDelete.Count -eq 0)) {
@@ -487,8 +487,8 @@ try {
             } | ConvertTo-Json -Depth 5
         }
         else {
-            Write-Output ''
-            Write-Output 'Nothing to clean.'
+            Write-Information '' -InformationAction Continue
+            Write-Information 'Nothing to clean.' -InformationAction Continue
         }
 
         exit 0
@@ -518,8 +518,8 @@ try {
     }
     else {
         Write-Section 'Summary'
-        Write-Output ('Files deleted      : {0}' -f $fileRemovalResult.DeletedCount)
-        Write-Output ('Directories deleted: {0}' -f $dirRemovalResult.DeletedCount)
+        Write-Information ('Files deleted      : {0}' -f $fileRemovalResult.DeletedCount) -InformationAction Continue
+        Write-Information ('Directories deleted: {0}' -f $dirRemovalResult.DeletedCount) -InformationAction Continue
     }
 
     if ($PassThru -and -not $Json) {
