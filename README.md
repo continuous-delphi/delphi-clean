@@ -11,7 +11,7 @@
 
 ## Overview
 
-`delphi-clean` is a PowerShell utility designed for Delphi developers to remove
+`delphi-clean` is a PowerShell utility designed for Delphi developers to help remove
 build artifacts, intermediate files, and IDE-generated clutter.
 
 ---
