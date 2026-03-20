@@ -1,8 +1,8 @@
-# delphi-clean Build Profiles
+# delphi-clean levels
 
-This document defines the cleanup profiles used by `delphi-clean.ps1`.
+This document defines the cleanup levels used by `delphi-clean.ps1`.
 
-Each profile is cumulative:
+Each level is cumulative:
 
 - `lite` defines the base cleanup set
 - `build` includes everything in `lite`, plus additional build artifacts
@@ -10,7 +10,7 @@ Each profile is cumulative:
 
 ---
 
-## `lite` (default)
+## LEVEL=`lite` (default)
 
 Safe cleanup of common transient files.
 
@@ -30,7 +30,7 @@ Safe cleanup of common transient files.
 
 ---
 
-## `build`
+## LEVEL=`build`
 
 Includes everything in `lite`, plus the following additional items.
 
@@ -77,7 +77,7 @@ Includes everything in `lite`, plus the following additional items.
 
 ---
 
-## `full`
+## LEVEL=`full`
 
 Includes everything in `build`, plus the following additional items.
 

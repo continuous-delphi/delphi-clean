@@ -26,13 +26,13 @@ pwsh -File .\delphi-clean.ps1 -WhatIf
 pwsh -File .\delphi-clean.ps1
 
 # CI usage
-pwsh -File .\delphi-clean.ps1 -Profile build -Json
+pwsh -File .\delphi-clean.ps1 -Level full -Json
 ```
 
 
 ## Features
 
-- Three cleanup profiles: `lite`, `build`, `full`
+- Three cleanup levels: `lite`, `build`, `full`
 - CI-friendly output with optional JSON mode
 - Optional structured output via `-PassThru`
 - Supports the `-WhatIf` dry-run mode
@@ -58,17 +58,17 @@ pwsh -File .\delphi-clean.ps1
 
 Defaults to:
 
-- Profile: `lite`
+- Level: `lite`
 - Root: parent directory of the script
 
 ---
 
-### Specify Profile
+### Specify Level
 
 ```powershell
-pwsh -File .\delphi-clean.ps1 -Profile lite
-pwsh -File .\delphi-clean.ps1 -Profile build
-pwsh -File .\delphi-clean.ps1 -Profile full
+pwsh -File .\delphi-clean.ps1 -Level lite
+pwsh -File .\delphi-clean.ps1 -Level build
+pwsh -File .\delphi-clean.ps1 -Level full
 ```
 
 ---
@@ -133,11 +133,11 @@ pwsh -File .\delphi-clean.ps1 -ExcludeDirectories .git,.vs,.idea
 
 ---
 
-## Profiles
+## Clean Levels
 
-- see: [/docs/build-profiles.md](/docs/build-profiles.md) for breakdown of each profile
+- see: [/docs/cleanup-levels.md](/docs/cleanup-levels.md) for breakdown of each level
 
-### lite (default)
+### `lite` (default)
 
 Safe cleanup of common transient files.
 
@@ -148,7 +148,7 @@ Includes:
 
 ---
 
-### build
+### `build`
 
 Removes build outputs and generated artifacts.
 
@@ -160,7 +160,7 @@ Includes everything in `lite`, plus:
 
 ---
 
-### full
+### `full`
 
 More aggressive cleanup
 

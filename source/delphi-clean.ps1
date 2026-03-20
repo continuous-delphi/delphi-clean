@@ -2,11 +2,11 @@
 
 <#
 .SYNOPSIS
-Cleans Delphi build artifacts from a repository tree using three cleanup profiles.
+Cleans Delphi build artifacts from a repository tree using three cleanup levels.
 
 .DESCRIPTION
 Runs from the tools location and targets the parent directory by default.
-Supports three cleanup profiles:
+Supports three cleanup levels:
 
   lite  - safe, low-risk cleanup of common transient files
   build - removes build outputs and common generated files
@@ -16,26 +16,26 @@ Supports three cleanup profiles:
 powershell.exe -File .\delphi-clean.ps1
 
 .EXAMPLE
-powershell.exe -File .\delphi-clean.ps1 -Profile build
+powershell.exe -File .\delphi-clean.ps1 -Level build
 
 .EXAMPLE
-powershell.exe -File .\delphi-clean.ps1 -Profile full -Verbose
+powershell.exe -File .\delphi-clean.ps1 -Level full -Verbose
 
 .EXAMPLE
-powershell.exe -File .\delphi-clean.ps1 -Profile full -WhatIf
+powershell.exe -File .\delphi-clean.ps1 -Level full -WhatIf
 
 .EXAMPLE
-powershell.exe -File .\delphi-clean.ps1 -Profile build -PassThru
+powershell.exe -File .\delphi-clean.ps1 -Level build -PassThru
 
 .EXAMPLE
-powershell.exe -File .\delphi-clean.ps1 -Profile build -Json
+powershell.exe -File .\delphi-clean.ps1 -Level build -Json
 #>
 
 [CmdletBinding(SupportsShouldProcess)]
 param(
     [Parameter()]
     [ValidateSet('lite', 'build', 'full')]
-    [string]$Profile = 'lite',
+    [string]$Level = 'lite',
 
     [Parameter()]
     [string]$RootPath,
@@ -167,7 +167,7 @@ function Test-PathUnderExcludedDirectory {
     return $false
 }
 
-function Get-ProfileDefinition {
+function Get-LevelDefinition {
     param(
         [Parameter(Mandatory)]
         [ValidateSet('lite', 'build', 'full')]
@@ -447,14 +447,14 @@ try {
     $cleanRoot = Resolve-CleanRoot -InputRoot $RootPath
     Test-SafeCleanRoot -Root $cleanRoot
 
-    $definition = Get-ProfileDefinition -Name $Profile
+    $definition = Get-LevelDefinition -Name $Level
     $mode = if ($WhatIfPreference) { 'WhatIf (no changes)' } else { 'Execute' }
     $returnRecords = ($PassThru -or $Json)
 
     Write-Section 'Delphi Clean'
 
     if (-not $Json) {
-        Write-Host ('Profile         : {0}' -f $Profile)
+        Write-Host ('Level           : {0}' -f $Level)
         Write-Host ('Root            : {0}' -f $cleanRoot)
         Write-Host ('Excluded dirs   : {0}' -f ($ExcludeDirectories -join ', '))
         Write-Host ('Mode            : {0}' -f $mode)
@@ -473,7 +473,7 @@ try {
 
         if ($Json) {
             [PSCustomObject]@{
-                Profile            = $Profile
+                Level              = $Level
                 Root               = $cleanRoot
                 ExcludedDirectories = @($ExcludeDirectories)
                 Mode               = $mode
@@ -503,7 +503,7 @@ try {
 
     if ($Json) {
         [PSCustomObject]@{
-            Profile             = $Profile
+            Level               = $Level
             Root                = $cleanRoot
             ExcludedDirectories = @($ExcludeDirectories)
             Mode                = $mode
