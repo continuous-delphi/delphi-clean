@@ -3,7 +3,7 @@
 All notable changes to this project will be documented in this file.
 
 ---
-## [0.2.0] Unreleased
+## [0.2.0] 2026-03-19
 
 - Code review change:
   - Write-Host changed to Write-Information
@@ -16,7 +16,6 @@ All notable changes to this project will be documented in this file.
 - Dry-run / WhatIf mode
 - ExcludeDirectories option
 - Basic tests
-
 
 <br />
 <br />
