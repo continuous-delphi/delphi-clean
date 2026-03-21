@@ -7,7 +7,7 @@
 #
 # The script validates preconditions before touching git:
 #   - Version argument matches X.Y.Z semver format
-#   - $script:Version in delphi-clean.ps1 matches the Version argument
+#   - $script:ToolVersion in delphi-clean.ps1 matches the Version argument
 #   - CHANGELOG.md has an entry for the version
 #   - Working tree is clean (no uncommitted changes)
 #   - Current branch matches the default branch on origin
@@ -89,13 +89,13 @@ if (-not (Test-Path -LiteralPath $scriptFile)) {
 }
 
 $scriptContent = Get-Content -LiteralPath $scriptFile -Raw
-if ($scriptContent -notmatch '\$script:Version\s*=\s*''([^'']+)''') {
-  Fail "Could not find '`$script:Version = ''...''' in delphi-clean.ps1."
+if ($scriptContent -notmatch '\$script:ToolVersion\s*=\s*''([^'']+)''') {
+  Fail "Could not find '`$script:ToolVersion = ''...''' in delphi-clean.ps1."
 }
 
 $scriptVersion = $Matches[1]
 if ($scriptVersion -ne $Version) {
-  Fail "`$script:Version in delphi-clean.ps1 is '$scriptVersion' but -Version arg is '$Version'.`n       Update `$script:Version in the script and commit before tagging."
+  Fail "`$script:ToolVersion in delphi-clean.ps1 is '$scriptVersion' but -Version arg is '$Version'.`n       Update `$script:ToolVersion in the script and commit before tagging."
 }
 
 Write-Ok "script version matches ($scriptVersion)"
