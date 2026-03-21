@@ -3,7 +3,7 @@
 All notable changes to this project will be documented in this file.
 
 ---
-## [0.4.0] Unreleased
+## [0.4.0] 2026-03-21
 
 - Add `-IncludeFilePattern` and `-ExcludeDirPattern`
   Mainly to optionally delete *.res as I was not intentionally deleting those
