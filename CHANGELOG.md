@@ -3,6 +3,13 @@
 All notable changes to this project will be documented in this file.
 
 ---
+## [0.4.0] Unreleased
+
+- Add `-IncludeFilePattern` and `-ExcludeDirPattern`
+  Mainly to optionally delete *.res as I was not intentionally deleting those
+  but it's been leaving my work folders with extra .res files.
+  [#2](https://github.com/continuous-delphi/delphi-clean/issues/2)
+
 ## [0.3.0] 2026-03-20
 
 - Add `-Version` switch for version reporting

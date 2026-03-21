@@ -85,4 +85,38 @@ Describe 'delphi-clean.ps1 integration tests' {
     Test-Path -LiteralPath (Join-Path $script:TempRoot 'source\Backup.~pas') | Should -BeFalse
   }
 
+  It 'deletes files matching -IncludeFilePattern' {
+    Set-Content -LiteralPath (Join-Path $script:TempRoot 'source\App.res') -Value 'dummy'
+
+    & $script:ToolPath -RootPath $script:TempRoot -Level lite -IncludeFilePattern '*.res' | Out-Null
+
+    Test-Path -LiteralPath (Join-Path $script:TempRoot 'source\App.res') | Should -BeFalse
+  }
+
+  It 'does not delete -IncludeFilePattern files under excluded directories' {
+    Set-Content -LiteralPath (Join-Path $script:TempRoot '.git\keep.res') -Value 'dummy'
+
+    & $script:ToolPath -RootPath $script:TempRoot -Level lite -IncludeFilePattern '*.res' | Out-Null
+
+    Test-Path -LiteralPath (Join-Path $script:TempRoot '.git\keep.res') | Should -BeTrue
+  }
+
+  It 'skips files inside directories matching -ExcludeDirPattern' {
+    New-Item -ItemType Directory -Path (Join-Path $script:TempRoot 'assets') | Out-Null
+    Set-Content -LiteralPath (Join-Path $script:TempRoot 'assets\icon.dcu') -Value 'dummy'
+
+    & $script:ToolPath -RootPath $script:TempRoot -Level lite -ExcludeDirPattern 'asset*' | Out-Null
+
+    Test-Path -LiteralPath (Join-Path $script:TempRoot 'assets\icon.dcu') | Should -BeTrue
+  }
+
+  It 'still cleans files outside -ExcludeDirPattern directories' {
+    New-Item -ItemType Directory -Path (Join-Path $script:TempRoot 'assets') | Out-Null
+    Set-Content -LiteralPath (Join-Path $script:TempRoot 'assets\icon.dcu') -Value 'dummy'
+
+    & $script:ToolPath -RootPath $script:TempRoot -Level lite -ExcludeDirPattern 'asset*' | Out-Null
+
+    Test-Path -LiteralPath (Join-Path $script:TempRoot 'source\Unit1.dcu') | Should -BeFalse
+  }
+
 }

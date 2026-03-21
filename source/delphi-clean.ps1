@@ -31,6 +31,12 @@ powershell.exe -File .\delphi-clean.ps1 -Level build -PassThru
 powershell.exe -File .\delphi-clean.ps1 -Level build -Json
 
 .EXAMPLE
+powershell.exe -File .\delphi-clean.ps1 -Level lite -IncludeFilePattern '*.res'
+
+.EXAMPLE
+powershell.exe -File .\delphi-clean.ps1 -Level lite -IncludeFilePattern '*.res','*.mab' -ExcludeDirPattern 'assets','vendor*'
+
+.EXAMPLE
 powershell.exe -File .\delphi-clean.ps1 -Version
 
 .EXAMPLE
@@ -61,6 +67,12 @@ param(
     ),
 
     [Parameter(ParameterSetName = 'Clean')]
+    [string[]]$IncludeFilePattern = @(),
+
+    [Parameter(ParameterSetName = 'Clean')]
+    [string[]]$ExcludeDirPattern = @(),
+
+    [Parameter(ParameterSetName = 'Clean')]
     [switch]$PassThru,
 
     [Parameter(ParameterSetName = 'Clean')]
@@ -70,7 +82,7 @@ param(
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 
-$script:ToolVersion = '0.3.0'
+$script:ToolVersion = '0.4.0'
 
 if ($Version) {
     if ($Format -eq 'json') {
@@ -180,7 +192,9 @@ function Test-PathUnderExcludedDirectory {
         [string]$Root,
 
         [Parameter(Mandatory)]
-        [string[]]$ExcludedDirectoryNames
+        [string[]]$ExcludedDirectoryNames,
+
+        [string[]]$ExcludedDirPatterns = @()
     )
 
     $relative = Get-RelativePathCompat -BasePath $Root -TargetPath $FullName
@@ -193,6 +207,11 @@ function Test-PathUnderExcludedDirectory {
     foreach ($part in $parts) {
         if ($ExcludedDirectoryNames -icontains $part) {
             return $true
+        }
+        foreach ($pattern in $ExcludedDirPatterns) {
+            if ($part -ilike $pattern) {
+                return $true
+            }
         }
     }
 
@@ -316,14 +335,16 @@ function Get-FilesToDelete {
         [string[]]$Patterns,
 
         [Parameter(Mandatory)]
-        [string[]]$ExcludedDirectoryNames
+        [string[]]$ExcludedDirectoryNames,
+
+        [string[]]$ExcludedDirPatterns = @()
     )
 
     Write-Verbose 'Scanning for matching files.'
 
     $allFiles = Get-ChildItem -Path $Root -Recurse -File -Force -ErrorAction SilentlyContinue |
         Where-Object {
-            -not (Test-PathUnderExcludedDirectory -FullName $_.FullName -Root $Root -ExcludedDirectoryNames $ExcludedDirectoryNames)
+            -not (Test-PathUnderExcludedDirectory -FullName $_.FullName -Root $Root -ExcludedDirectoryNames $ExcludedDirectoryNames -ExcludedDirPatterns $ExcludedDirPatterns)
         }
 
     $allFiles |
@@ -348,7 +369,9 @@ function Get-DirectoriesToDelete {
         [string[]]$DirectoryNames,
 
         [Parameter(Mandatory)]
-        [string[]]$ExcludedDirectoryNames
+        [string[]]$ExcludedDirectoryNames,
+
+        [string[]]$ExcludedDirPatterns = @()
     )
 
     Write-Verbose 'Scanning for matching directories.'
@@ -361,7 +384,7 @@ function Get-DirectoriesToDelete {
     Get-ChildItem -Path $Root -Recurse -Directory -Force -ErrorAction SilentlyContinue |
         Where-Object {
             $nameSet.ContainsKey($_.Name.ToUpperInvariant()) -and
-            -not (Test-PathUnderExcludedDirectory -FullName $_.FullName -Root $Root -ExcludedDirectoryNames $ExcludedDirectoryNames)
+            -not (Test-PathUnderExcludedDirectory -FullName $_.FullName -Root $Root -ExcludedDirectoryNames $ExcludedDirectoryNames -ExcludedDirPatterns $ExcludedDirPatterns)
         } |
         Sort-Object -Property FullName -Unique |
         Sort-Object -Property { $_.FullName.Length } -Descending
@@ -483,17 +506,25 @@ try {
     $mode = if ($WhatIfPreference) { 'WhatIf (no changes)' } else { 'Execute' }
     $returnRecords = ($PassThru -or $Json)
 
+    $allFilePatterns = @($definition.FilePatterns) + @($IncludeFilePattern) | Sort-Object -Unique
+
     Write-Section 'Delphi Clean'
 
     if (-not $Json) {
         Write-Information ('Level           : {0}' -f $Level) -InformationAction Continue
         Write-Information ('Root            : {0}' -f $cleanRoot) -InformationAction Continue
         Write-Information ('Excluded dirs   : {0}' -f ($ExcludeDirectories -join ', ')) -InformationAction Continue
+        if ($ExcludeDirPattern.Count -gt 0) {
+            Write-Information ('Excl dir patterns: {0}' -f ($ExcludeDirPattern -join ', ')) -InformationAction Continue
+        }
+        if ($IncludeFilePattern.Count -gt 0) {
+            Write-Information ('Extra patterns  : {0}' -f ($IncludeFilePattern -join ', ')) -InformationAction Continue
+        }
         Write-Information ('Mode            : {0}' -f $mode) -InformationAction Continue
     }
 
-    $filesToDelete = @(Get-FilesToDelete -Root $cleanRoot -Patterns $definition.FilePatterns -ExcludedDirectoryNames $ExcludeDirectories)
-    $dirsToDelete  = @(Get-DirectoriesToDelete -Root $cleanRoot -DirectoryNames $definition.DirectoryNames -ExcludedDirectoryNames $ExcludeDirectories)
+    $filesToDelete = @(Get-FilesToDelete -Root $cleanRoot -Patterns $allFilePatterns -ExcludedDirectoryNames $ExcludeDirectories -ExcludedDirPatterns $ExcludeDirPattern)
+    $dirsToDelete  = @(Get-DirectoriesToDelete -Root $cleanRoot -DirectoryNames $definition.DirectoryNames -ExcludedDirectoryNames $ExcludeDirectories -ExcludedDirPatterns $ExcludeDirPattern)
 
     if (-not $Json) {
         Write-Information '' -InformationAction Continue
@@ -505,15 +536,17 @@ try {
 
         if ($Json) {
             [PSCustomObject]@{
-                Level              = $Level
-                Root               = $cleanRoot
+                Level               = $Level
+                Root                = $cleanRoot
                 ExcludedDirectories = @($ExcludeDirectories)
-                Mode               = $mode
-                FilesFound         = 0
-                DirectoriesFound   = 0
-                FilesDeleted       = 0
-                DirectoriesDeleted = 0
-                Items              = @()
+                ExcludeDirPattern   = @($ExcludeDirPattern)
+                IncludeFilePattern  = @($IncludeFilePattern)
+                Mode                = $mode
+                FilesFound          = 0
+                DirectoriesFound    = 0
+                FilesDeleted        = 0
+                DirectoriesDeleted  = 0
+                Items               = @()
             } | ConvertTo-Json -Depth 5
         }
         else {
@@ -538,6 +571,8 @@ try {
             Level               = $Level
             Root                = $cleanRoot
             ExcludedDirectories = @($ExcludeDirectories)
+            ExcludeDirPattern   = @($ExcludeDirPattern)
+            IncludeFilePattern  = @($IncludeFilePattern)
             Mode                = $mode
             FilesFound          = $filesToDelete.Count
             DirectoriesFound    = $dirsToDelete.Count

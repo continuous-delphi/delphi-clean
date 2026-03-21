@@ -1,6 +1,7 @@
 # delphi-clean levels
 
-This document defines the cleanup levels used by `delphi-clean.ps1`.
+This document defines the cleanup levels and per-invocation extension
+parameters used by `delphi-clean.ps1`.
 
 Each level is cumulative:
 
@@ -95,3 +96,43 @@ Includes everything in `build`, plus the following additional items.
 ### Additional Directories
 
 - `__recovery`
+
+---
+
+## Per-invocation extension parameters
+
+These parameters are independent of the chosen level and can be combined
+with any level.
+
+### `-IncludeFilePattern <string[]>`
+
+Adds one or more extra wildcard file patterns to the deletion set for this
+run.  Use this for project-specific files that are intentionally omitted
+from the built-in levels.
+
+Example -- delete compiled resource files in addition to the `lite` set:
+
+    delphi-clean.ps1 -Level lite -IncludeFilePattern '*.res'
+
+Example -- delete multiple extra patterns:
+
+    delphi-clean.ps1 -Level build -IncludeFilePattern '*.res','*.mab'
+
+### `-ExcludeDirPattern <string[]>`
+
+Skips any directory whose name matches one of the supplied wildcard
+patterns.  This supplements the fixed `-ExcludeDirectories` list and is
+useful when a project folder (such as `assets` or a vendor subtree)
+contains files that would otherwise match the cleanup patterns.
+
+Example -- protect an assets folder from cleanup:
+
+    delphi-clean.ps1 -Level lite -ExcludeDirPattern 'assets'
+
+Example -- wildcard to protect all vendor-prefixed folders:
+
+    delphi-clean.ps1 -Level build -ExcludeDirPattern 'vendor*'
+
+Both parameters may be combined:
+
+    delphi-clean.ps1 -Level lite -IncludeFilePattern '*.res' -ExcludeDirPattern 'assets','vendor*'
