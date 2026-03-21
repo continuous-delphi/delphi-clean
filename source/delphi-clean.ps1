@@ -29,35 +29,65 @@ powershell.exe -File .\delphi-clean.ps1 -Level build -PassThru
 
 .EXAMPLE
 powershell.exe -File .\delphi-clean.ps1 -Level build -Json
+
+.EXAMPLE
+powershell.exe -File .\delphi-clean.ps1 -Version
+
+.EXAMPLE
+powershell.exe -File .\delphi-clean.ps1 -Version -Format json
 #>
 
-[CmdletBinding(SupportsShouldProcess)]
+[CmdletBinding(SupportsShouldProcess, DefaultParameterSetName = 'Clean')]
 param(
-    [Parameter()]
+    [Parameter(ParameterSetName = 'Version', Mandatory)]
+    [switch]$Version,
+
+    [Parameter(ParameterSetName = 'Version')]
+    [ValidateSet('text', 'json')]
+    [string]$Format = 'text',
+
+    [Parameter(ParameterSetName = 'Clean')]
     [ValidateSet('lite', 'build', 'full')]
     [string]$Level = 'lite',
 
-    [Parameter()]
+    [Parameter(ParameterSetName = 'Clean')]
     [string]$RootPath,
 
-    [Parameter()]
+    [Parameter(ParameterSetName = 'Clean')]
     [string[]]$ExcludeDirectories = @(
         '.git',
         '.vs',
         '.claude'
     ),
 
-    [Parameter()]
+    [Parameter(ParameterSetName = 'Clean')]
     [switch]$PassThru,
 
-    [Parameter()]
+    [Parameter(ParameterSetName = 'Clean')]
     [switch]$Json
 )
 
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 
-$script:Version = '0.2.0'
+$script:ToolVersion = '0.3.0'
+
+if ($Version) {
+    if ($Format -eq 'json') {
+        [PSCustomObject]@{
+            ok      = $true
+            command = 'version'
+            tool    = [PSCustomObject]@{
+                name    = 'delphi-clean'
+                version = $script:ToolVersion
+            }
+        } | ConvertTo-Json -Depth 3 -Compress
+    }
+    else {
+        Write-Output "delphi-clean $script:ToolVersion"
+    }
+    exit 0
+}
 
 function Write-Section {
     param(

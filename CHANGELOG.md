@@ -3,6 +3,16 @@
 All notable changes to this project will be documented in this file.
 
 ---
+## [0.3.0] 2026-03-20
+
+- Add `-Version` switch for version reporting
+  - Default (text) format: `delphi-clean 0.3.0`
+  - JSON format (`-Format json`): machine envelope matching delphi-inspect
+    convention: `{"ok":true,"command":"version","tool":{"name":"delphi-clean","version":"0.3.0"}}`
+  - `-Version` and clean parameters (`-Level`, `-RootPath`, etc.) are
+    mutually exclusive via parameter sets
+
+
 ## [0.2.0] 2026-03-19
 
 - Code review change:
