@@ -36,6 +36,9 @@ pwsh -File .\delphi-clean.ps1 -Level full -Json
 - CI-friendly output with optional JSON mode
 - Optional structured output via `-PassThru`
 - Supports the `-WhatIf` dry-run mode
+- Add extra file patterns with `-IncludeFilePattern`
+- Exclude directories by wildcard pattern with `-ExcludeDirPattern`
+- Send items to the recycle bin / trash instead of permanent deletion with `-RecycleBin`
 
 ---
 
@@ -122,6 +125,7 @@ Outputs a JSON summary including:
 - Files deleted
 - Directories deleted
 - Item-level details
+- `Disposition` (`Permanent` or `Recycle Bin`) and `RecycleBin` flag
 
 ---
 
@@ -130,6 +134,53 @@ Outputs a JSON summary including:
 ```powershell
 pwsh -File .\delphi-clean.ps1 -ExcludeDirectories .git,.vs,.idea
 ```
+
+Matches exact directory names. Default exclusions are `.git`, `.vs`, and `.claude`.
+
+---
+
+### Include Extra File Patterns
+
+```powershell
+pwsh -File .\delphi-clean.ps1 -Level lite -IncludeFilePattern '*.res'
+pwsh -File .\delphi-clean.ps1 -Level lite -IncludeFilePattern '*.res','*.mab'
+```
+
+Appends additional glob patterns to the level's built-in file list. Useful for
+project-specific artifacts not covered by the standard levels.
+
+---
+
+### Exclude Directory Patterns
+
+```powershell
+pwsh -File .\delphi-clean.ps1 -ExcludeDirPattern 'vendor*'
+pwsh -File .\delphi-clean.ps1 -ExcludeDirPattern 'vendor*','assets'
+```
+
+Skips any directory whose name matches one of the given wildcard patterns.
+Unlike `-ExcludeDirectories`, patterns are matched with `-like` so wildcards
+(`*`, `?`) are supported.
+
+---
+
+### Recycle Bin
+
+```powershell
+pwsh -File .\delphi-clean.ps1 -RecycleBin
+pwsh -File .\delphi-clean.ps1 -Level build -RecycleBin
+```
+
+Sends items to the platform trash instead of permanently deleting them.
+
+| Platform | Destination |
+|----------|-------------|
+| Windows  | Recycle Bin (`Microsoft.VisualBasic.FileIO`) |
+| macOS    | `~/.Trash/` |
+| Linux    | `~/.local/share/Trash/` (FreeDesktop spec) |
+
+Combine with `-WhatIf` to preview which items would be recycled without
+making any changes.
 
 ---
 
