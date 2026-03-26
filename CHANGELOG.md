@@ -3,6 +3,10 @@
 All notable changes to this project will be documented in this file.
 
 ---
+## [0.5.0] 2026-03-25
+
+- Add `-RecycleBin` option to move to recycle bin instead of permanent delete
+
 ## [0.4.0] 2026-03-21
 
 - Add `-IncludeFilePattern` and `-ExcludeDirPattern`
