@@ -9,7 +9,7 @@ All notable changes to this project will be documented in this file.
 - More conservative clean
   Remove `*.dll` + `*.obj` from clean list
   User will need to add with `-IncludeFiles` if desired
-  May revisit this later...maybe more to an `Extended` level
+  May revisit this later...maybe add an `Extended` level
   [#5](https://github.com/continuous-delphi/delphi-clean/issues/5)
   [#6](https://github.com/continuous-delphi/delphi-clean/issues/6)
 
