@@ -53,6 +53,7 @@ Includes everything in `lite`, plus the following additional items.
 - `*.exe`
 - `*.obj`
 - `*.hpp`
+- `*.dres`
 - `*.ilc`
 - `*.ild`
 - `*.ilf`
@@ -136,3 +137,18 @@ Example -- wildcard to protect all vendor-prefixed folders:
 Both parameters may be combined:
 
     delphi-clean.ps1 -Level lite -IncludeFilePattern '*.res' -ExcludeDirPattern 'assets','vendor*'
+
+### `-RecycleBin`
+
+Sends deleted items to the platform trash instead of permanently removing them.
+Supported on Windows (Recycle Bin), macOS (`~/.Trash/`), and Linux
+(`~/.local/share/Trash/` per the FreeDesktop spec).
+
+Example:
+
+    delphi-clean.ps1 -Level build -RecycleBin
+
+Can be combined with `-WhatIf` to preview which items would be recycled without
+making any changes:
+
+    delphi-clean.ps1 -Level build -RecycleBin -WhatIf
