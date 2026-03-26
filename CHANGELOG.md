@@ -3,9 +3,20 @@
 All notable changes to this project will be documented in this file.
 
 ---
+
+## [0.6.0] 2026-03-26
+
+- More conservative clean
+  Remove `*.dll` + `*.obj` from clean list
+  User will need to add with `-IncludeFiles` if desired
+  May revisit this later...maybe more to an `Extended` level
+  [#5](https://github.com/continuous-delphi/delphi-clean/issues/5)
+  [#6](https://github.com/continuous-delphi/delphi-clean/issues/6)
+
 ## [0.5.0] 2026-03-25
 
 - Add `-RecycleBin` option to move to recycle bin instead of permanent delete
+  [#3](https://github.com/continuous-delphi/delphi-clean/issues/3)
 
 ## [0.4.0] 2026-03-21
 

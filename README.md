@@ -205,7 +205,7 @@ Removes build outputs and generated artifacts.
 
 Includes everything in `lite`, plus:
 
-- Compiled binaries (`.exe`, `.dll`, `.bpl`, etc.)
+- Compiled binaries (`.exe`, `.bpl`, etc.)
 - Debug and release folders
 - Intermediate files
 
