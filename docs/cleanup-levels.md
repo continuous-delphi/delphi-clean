@@ -49,9 +49,7 @@ Includes everything in `lite`, plus the following additional items.
 - `*.dcp`
 - `*.bpi`
 - `*.so`
-- `*.dll`
 - `*.exe`
-- `*.obj`
 - `*.hpp`
 - `*.dres`
 - `*.ilc`
