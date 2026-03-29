@@ -81,7 +81,7 @@ Describe 'delphi-clean.ps1 -Version' {
     Context 'mutual exclusion with clean parameters' {
 
         It 'does not accept -Level with -Version' {
-            { & $script:ToolPath -Version -Level build } | Should -Throw
+            { & $script:ToolPath -Version -Level standard } | Should -Throw
         }
 
         It 'does not accept -RootPath with -Version' {

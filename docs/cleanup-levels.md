@@ -5,13 +5,13 @@ parameters used by `delphi-clean.ps1`.
 
 Each level is cumulative:
 
-- `lite` defines the base cleanup set
-- `build` includes everything in `lite`, plus additional build artifacts
-- `full` includes everything in `build`, plus additional aggressive cleanup items
+- `basic` defines the base cleanup set
+- `standard` includes everything in `basic`, plus additional build artifacts
+- `deep` includes everything in `standard`, plus additional aggressive cleanup items
 
 ---
 
-## LEVEL=`lite` (default)
+## LEVEL=`basic` (default)
 
 Safe cleanup of common transient files.
 
@@ -31,16 +31,12 @@ Safe cleanup of common transient files.
 
 ---
 
-## LEVEL=`build`
+## LEVEL=`standard`
 
-Includes everything in `lite`, plus the following additional items.
+Includes everything in `basic, plus the following additional items.
 
 ### Additional Files
 
-- `*.local`
-- `*.dproj.local`
-- `*.groupproj.local`
-- `*.projdata`
 - `*.drc`
 - `*.map`
 - `*.rsm`
@@ -77,12 +73,16 @@ Includes everything in `lite`, plus the following additional items.
 
 ---
 
-## LEVEL=`full`
+## LEVEL=`deep`
 
-Includes everything in `build`, plus the following additional items.
+Includes everything in `standard`, plus the following additional items.
 
 ### Additional Files
 
+- `*.local`
+- `*.dproj.local`
+- `*.groupproj.local`
+- `*.projdata`
 - `*.~*`
 - `*.lib`
 - `*.fbpInf`
@@ -109,13 +109,13 @@ Adds one or more extra wildcard file patterns to the deletion set for this
 run.  Use this for project-specific files that are intentionally omitted
 from the built-in levels.
 
-Example -- delete compiled resource files in addition to the `lite` set:
+Example -- delete compiled resource files in addition to the `basic` set:
 
-    delphi-clean.ps1 -Level lite -IncludeFilePattern '*.res'
+    delphi-clean.ps1 -Level basic -IncludeFilePattern '*.res'
 
 Example -- delete multiple extra patterns:
 
-    delphi-clean.ps1 -Level build -IncludeFilePattern '*.res','*.mab'
+    delphi-clean.ps1 -Level standard -IncludeFilePattern '*.res','*.mab'
 
 ### `-ExcludeDirPattern <string[]>`
 
@@ -126,15 +126,15 @@ contains files that would otherwise match the cleanup patterns.
 
 Example -- protect an assets folder from cleanup:
 
-    delphi-clean.ps1 -Level lite -ExcludeDirPattern 'assets'
+    delphi-clean.ps1 -Level basic -ExcludeDirPattern 'assets'
 
 Example -- wildcard to protect all vendor-prefixed folders:
 
-    delphi-clean.ps1 -Level build -ExcludeDirPattern 'vendor*'
+    delphi-clean.ps1 -Level standard -ExcludeDirPattern 'vendor*'
 
 Both parameters may be combined:
 
-    delphi-clean.ps1 -Level lite -IncludeFilePattern '*.res' -ExcludeDirPattern 'assets','vendor*'
+    delphi-clean.ps1 -Level basic -IncludeFilePattern '*.res' -ExcludeDirPattern 'assets','vendor*'
 
 ### `-RecycleBin`
 
@@ -144,9 +144,9 @@ Supported on Windows (Recycle Bin), macOS (`~/.Trash/`), and Linux
 
 Example:
 
-    delphi-clean.ps1 -Level build -RecycleBin
+    delphi-clean.ps1 -Level standard -RecycleBin
 
 Can be combined with `-WhatIf` to preview which items would be recycled without
 making any changes:
 
-    delphi-clean.ps1 -Level build -RecycleBin -WhatIf
+    delphi-clean.ps1 -Level standard -RecycleBin -WhatIf
