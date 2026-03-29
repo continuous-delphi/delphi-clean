@@ -58,7 +58,7 @@ The tests create a temporary workspace and verify that:
 
 - `-WhatIf` does not delete files
 - `-Json` returns parseable JSON
-- the `build` level removes generated artifacts
+- the `standard` level removes generated artifacts
 - excluded directories are respected
 
 These tests avoid modifying the repository itself.

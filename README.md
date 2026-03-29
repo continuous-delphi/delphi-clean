@@ -26,13 +26,13 @@ pwsh -File .\delphi-clean.ps1 -WhatIf
 pwsh -File .\delphi-clean.ps1
 
 # CI usage
-pwsh -File .\delphi-clean.ps1 -Level full -Json
+pwsh -File .\delphi-clean.ps1 -Level deep -Json
 ```
 
 
 ## Features
 
-- Three cleanup levels: `lite`, `build`, `full`
+- Three cleanup levels: `basic`, `standard`, `deep`
 - CI-friendly output with optional JSON mode
 - Optional structured output via `-PassThru`
 - Supports the `-WhatIf` dry-run mode
@@ -61,7 +61,7 @@ pwsh -File .\delphi-clean.ps1
 
 Defaults to:
 
-- Level: `lite`
+- Level: `basic`
 - Root: parent directory of the script
 
 ---
@@ -69,9 +69,9 @@ Defaults to:
 ### Specify Level
 
 ```powershell
-pwsh -File .\delphi-clean.ps1 -Level lite
-pwsh -File .\delphi-clean.ps1 -Level build
-pwsh -File .\delphi-clean.ps1 -Level full
+pwsh -File .\delphi-clean.ps1 -Level basic
+pwsh -File .\delphi-clean.ps1 -Level standard
+pwsh -File .\delphi-clean.ps1 -Level deep
 ```
 
 ---
@@ -142,8 +142,8 @@ Matches exact directory names. Default exclusions are `.git`, `.vs`, and `.claud
 ### Include Extra File Patterns
 
 ```powershell
-pwsh -File .\delphi-clean.ps1 -Level lite -IncludeFilePattern '*.res'
-pwsh -File .\delphi-clean.ps1 -Level lite -IncludeFilePattern '*.res','*.mab'
+pwsh -File .\delphi-clean.ps1 -Level basic -IncludeFilePattern '*.res'
+pwsh -File .\delphi-clean.ps1 -Level basic -IncludeFilePattern '*.res','*.mab'
 ```
 
 Appends additional glob patterns to the level's built-in file list. Useful for
@@ -168,7 +168,7 @@ Unlike `-ExcludeDirectories`, patterns are matched with `-like` so wildcards
 
 ```powershell
 pwsh -File .\delphi-clean.ps1 -RecycleBin
-pwsh -File .\delphi-clean.ps1 -Level build -RecycleBin
+pwsh -File .\delphi-clean.ps1 -Level standard -RecycleBin
 ```
 
 Sends items to the platform trash instead of permanently deleting them.
@@ -188,7 +188,7 @@ making any changes.
 
 - see: [/docs/cleanup-levels.md](/docs/cleanup-levels.md) for breakdown of each level
 
-### `lite` (default)
+### `basic` (default)
 
 Safe cleanup of common transient files.
 
@@ -199,11 +199,11 @@ Includes:
 
 ---
 
-### `build`
+### `standard`
 
 Removes build outputs and generated artifacts.
 
-Includes everything in `lite`, plus:
+Includes everything in `basic`, plus:
 
 - Compiled binaries (`.exe`, `.bpl`, etc.)
 - Debug and release folders
@@ -211,11 +211,11 @@ Includes everything in `lite`, plus:
 
 ---
 
-### `full`
+### `deep`
 
 More aggressive cleanup
 
-Includes everything in `build`, plus:
+Includes everything in `standard`, plus:
 
 - Backup files (`*.~*`)
 - FinalBuilder related files (logs, breakpoint, lock)

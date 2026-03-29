@@ -36,33 +36,33 @@ Describe 'delphi-clean.ps1 -RecycleBin tests' {
   }
 
   It 'recycles files -- they no longer exist at original path' {
-    & $script:ToolPath -RootPath $script:TempRoot -Level lite -RecycleBin | Out-Null
+    & $script:ToolPath -RootPath $script:TempRoot -Level basic -RecycleBin | Out-Null
 
     Test-Path -LiteralPath (Join-Path $script:TempRoot 'source\Unit1.dcu') | Should -BeFalse
     Test-Path -LiteralPath (Join-Path $script:TempRoot 'source\Unit1.identcache') | Should -BeFalse
   }
 
   It 'recycles directories -- they no longer exist at original path' {
-    & $script:ToolPath -RootPath $script:TempRoot -Level build -RecycleBin | Out-Null
+    & $script:ToolPath -RootPath $script:TempRoot -Level standard -RecycleBin | Out-Null
 
     Test-Path -LiteralPath (Join-Path $script:TempRoot 'source\__history') | Should -BeFalse
     Test-Path -LiteralPath (Join-Path $script:TempRoot 'source\Win32') | Should -BeFalse
   }
 
   It 'respects excluded directories when using -RecycleBin' {
-    & $script:ToolPath -RootPath $script:TempRoot -Level build -RecycleBin | Out-Null
+    & $script:ToolPath -RootPath $script:TempRoot -Level standard -RecycleBin | Out-Null
 
     Test-Path -LiteralPath (Join-Path $script:TempRoot '.git\keep.dcu') | Should -BeTrue
   }
 
   It 'supports WhatIf with -RecycleBin -- no files removed' {
-    & $script:ToolPath -RootPath $script:TempRoot -Level lite -RecycleBin -WhatIf | Out-Null
+    & $script:ToolPath -RootPath $script:TempRoot -Level basic -RecycleBin -WhatIf | Out-Null
 
     Test-Path -LiteralPath (Join-Path $script:TempRoot 'source\Unit1.dcu') | Should -BeTrue
   }
 
   It 'JSON output includes RecycleBin true when -RecycleBin is specified' {
-    $jsonText = & $script:ToolPath -RootPath $script:TempRoot -Level lite -RecycleBin -Json -WhatIf
+    $jsonText = & $script:ToolPath -RootPath $script:TempRoot -Level basic -RecycleBin -Json -WhatIf
     $result = $jsonText | ConvertFrom-Json
 
     $result.RecycleBin | Should -BeTrue
@@ -70,7 +70,7 @@ Describe 'delphi-clean.ps1 -RecycleBin tests' {
   }
 
   It 'JSON output includes RecycleBin false when -RecycleBin is not specified' {
-    $jsonText = & $script:ToolPath -RootPath $script:TempRoot -Level lite -Json -WhatIf
+    $jsonText = & $script:ToolPath -RootPath $script:TempRoot -Level basic -Json -WhatIf
     $result = $jsonText | ConvertFrom-Json
 
     $result.RecycleBin | Should -BeFalse

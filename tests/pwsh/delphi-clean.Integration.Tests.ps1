@@ -41,7 +41,7 @@ Describe 'delphi-clean.ps1 integration tests' {
   }
 
   It 'supports WhatIf without deleting files' {
-    & $script:ToolPath -RootPath $script:TempRoot -Level build -WhatIf | Out-Null
+    & $script:ToolPath -RootPath $script:TempRoot -Level standard -WhatIf | Out-Null
 
     Test-Path -LiteralPath (Join-Path $script:TempRoot 'source\Unit1.dcu') | Should -BeTrue
     Test-Path -LiteralPath (Join-Path $script:TempRoot 'source\App.exe') | Should -BeTrue
@@ -49,17 +49,17 @@ Describe 'delphi-clean.ps1 integration tests' {
   }
 
   It 'returns parseable JSON output' {
-    $jsonText = & $script:ToolPath -RootPath $script:TempRoot -Level build -Json -WhatIf
+    $jsonText = & $script:ToolPath -RootPath $script:TempRoot -Level standard -Json -WhatIf
     $result = $jsonText | ConvertFrom-Json
 
-    $result.Level | Should -Be 'build'
+    $result.Level | Should -Be 'standard'
     $result.FilesFound | Should -BeGreaterThan 0
     $result.DirectoriesFound | Should -BeGreaterThan 0
     @($result.Items).Count | Should -BeGreaterThan 0
   }
 
-  It 'removes build artifacts in build level' {
-    & $script:ToolPath -RootPath $script:TempRoot -Level build | Out-Null
+  It 'removes build artifacts in standard level' {
+    & $script:ToolPath -RootPath $script:TempRoot -Level standard | Out-Null
 
     Test-Path -LiteralPath (Join-Path $script:TempRoot 'source\Unit1.dcu') | Should -BeFalse
     Test-Path -LiteralPath (Join-Path $script:TempRoot 'source\App.exe') | Should -BeFalse
@@ -67,20 +67,20 @@ Describe 'delphi-clean.ps1 integration tests' {
   }
 
   It 'respects excluded directories' {
-    & $script:ToolPath -RootPath $script:TempRoot -Level build | Out-Null
+    & $script:ToolPath -RootPath $script:TempRoot -Level standard | Out-Null
 
     Test-Path -LiteralPath (Join-Path $script:TempRoot '.git\keep.dcu') | Should -BeTrue
     Test-Path -LiteralPath (Join-Path $script:TempRoot '.vs\keep.exe') | Should -BeTrue
   }
 
-  It 'keeps full-only backup files during build level cleanup' {
-    & $script:ToolPath -RootPath $script:TempRoot -Level build | Out-Null
+  It 'keeps deep-only backup files during standard level cleanup' {
+    & $script:ToolPath -RootPath $script:TempRoot -Level standard | Out-Null
 
     Test-Path -LiteralPath (Join-Path $script:TempRoot 'source\Backup.~pas') | Should -BeTrue
   }
 
-  It 'removes full-only backup files during full level cleanup' {
-    & $script:ToolPath -RootPath $script:TempRoot -Level full | Out-Null
+  It 'removes deep-only backup files during deep level cleanup' {
+    & $script:ToolPath -RootPath $script:TempRoot -Level deep | Out-Null
 
     Test-Path -LiteralPath (Join-Path $script:TempRoot 'source\Backup.~pas') | Should -BeFalse
   }
@@ -88,7 +88,7 @@ Describe 'delphi-clean.ps1 integration tests' {
   It 'deletes files matching -IncludeFilePattern' {
     Set-Content -LiteralPath (Join-Path $script:TempRoot 'source\App.res') -Value 'dummy'
 
-    & $script:ToolPath -RootPath $script:TempRoot -Level lite -IncludeFilePattern '*.res' | Out-Null
+    & $script:ToolPath -RootPath $script:TempRoot -Level basic -IncludeFilePattern '*.res' | Out-Null
 
     Test-Path -LiteralPath (Join-Path $script:TempRoot 'source\App.res') | Should -BeFalse
   }
@@ -96,7 +96,7 @@ Describe 'delphi-clean.ps1 integration tests' {
   It 'does not delete -IncludeFilePattern files under excluded directories' {
     Set-Content -LiteralPath (Join-Path $script:TempRoot '.git\keep.res') -Value 'dummy'
 
-    & $script:ToolPath -RootPath $script:TempRoot -Level lite -IncludeFilePattern '*.res' | Out-Null
+    & $script:ToolPath -RootPath $script:TempRoot -Level basic -IncludeFilePattern '*.res' | Out-Null
 
     Test-Path -LiteralPath (Join-Path $script:TempRoot '.git\keep.res') | Should -BeTrue
   }
@@ -105,7 +105,7 @@ Describe 'delphi-clean.ps1 integration tests' {
     New-Item -ItemType Directory -Path (Join-Path $script:TempRoot 'assets') | Out-Null
     Set-Content -LiteralPath (Join-Path $script:TempRoot 'assets\icon.dcu') -Value 'dummy'
 
-    & $script:ToolPath -RootPath $script:TempRoot -Level lite -ExcludeDirPattern 'asset*' | Out-Null
+    & $script:ToolPath -RootPath $script:TempRoot -Level basic -ExcludeDirPattern 'asset*' | Out-Null
 
     Test-Path -LiteralPath (Join-Path $script:TempRoot 'assets\icon.dcu') | Should -BeTrue
   }
@@ -114,7 +114,7 @@ Describe 'delphi-clean.ps1 integration tests' {
     New-Item -ItemType Directory -Path (Join-Path $script:TempRoot 'assets') | Out-Null
     Set-Content -LiteralPath (Join-Path $script:TempRoot 'assets\icon.dcu') -Value 'dummy'
 
-    & $script:ToolPath -RootPath $script:TempRoot -Level lite -ExcludeDirPattern 'asset*' | Out-Null
+    & $script:ToolPath -RootPath $script:TempRoot -Level basic -ExcludeDirPattern 'asset*' | Out-Null
 
     Test-Path -LiteralPath (Join-Path $script:TempRoot 'source\Unit1.dcu') | Should -BeFalse
   }

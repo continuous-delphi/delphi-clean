@@ -10,8 +10,8 @@ for %%A in (%*) do (
 if defined HAS_PROFILE (
     pwsh -NoProfile -ExecutionPolicy Bypass -File "%~dp0delphi-clean.ps1" %*
 ) else (
-    rem default to lite mode and pause after completion
-    pwsh -NoProfile -ExecutionPolicy Bypass -File "%~dp0delphi-clean.ps1" -Level lite %*
+    rem default to basic mode and pause after completion
+    pwsh -NoProfile -ExecutionPolicy Bypass -File "%~dp0delphi-clean.ps1" -Level basic %*
     pause
 )
 
