@@ -4,6 +4,11 @@ All notable changes to this project will be documented in this file.
 
 ---
 
+## [0.7.0] 2026-03-29
+
+- Move to "basic+standard+deep" cleanup levels
+  [#8](https://github.com/continuous-delphi/delphi-clean/issues/8)  
+
 ## [0.6.0] 2026-03-26
 
 - More conservative clean
