@@ -214,6 +214,18 @@ Includes everything in `standard`, plus:
 
 ---
 
+## Exit Codes
+
+```text
+  0 = success: every matched item was removed (or WhatIf run, or nothing to clean)
+  1 = fatal:   unhandled exception before or during the scan phase - bad root path,
+               unsupported platform for -RecycleBin, scan error, etc.
+  2 = partial: the script reached the removal phase but at least one item could not
+               be deleted or recycled; successfully removed items are not rolled back
+```
+
+---
+
 ## Maturity
 
 This repository is currently `incubator` and is under active development.
