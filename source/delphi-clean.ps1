@@ -766,10 +766,12 @@ try {
         $allRecords
     }
 
-    # CHANGE: exit 2 when one or more items could not be deleted/recycled.
-    # exit 0 = success (all items removed)
-    # exit 1 = unhandled exception (catch block below)
-    # exit 2 = partial or total failure (at least one item could not be removed)
+    # Exit code contract:
+    #   0 = success: every matched item was removed (or WhatIf run, or nothing to clean)
+    #   1 = fatal:   unhandled exception before or during the scan phase — bad root path,
+    #                unsupported platform for -RecycleBin, scan error, etc. (catch block below)
+    #   2 = partial: the script reached the removal phase but at least one item could not
+    #                be deleted or recycled; successfully removed items are not rolled back
     if ($totalFailed -gt 0) {
         exit 2
     }
