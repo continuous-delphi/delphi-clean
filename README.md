@@ -37,7 +37,7 @@ pwsh -File .\delphi-clean.ps1 -Level deep -Json
 - Optional structured output via `-PassThru`
 - Supports the `-WhatIf` dry-run mode
 - Add extra file patterns with `-IncludeFilePattern`
-- Exclude directories by wildcard pattern with `-ExcludeDirPattern`
+- Exclude directories by wildcard pattern with `-ExcludeDirectoryPattern`
 - Send items to the recycle bin / trash instead of permanent deletion with `-RecycleBin`
 
 ---
@@ -129,16 +129,6 @@ Outputs a JSON summary including:
 
 ---
 
-### Exclude Directories
-
-```powershell
-pwsh -File .\delphi-clean.ps1 -ExcludeDirectories .git,.vs,.idea
-```
-
-Matches exact directory names. Default exclusions are `.git`, `.vs`, and `.claude`.
-
----
-
 ### Include Extra File Patterns
 
 ```powershell
@@ -154,13 +144,14 @@ project-specific artifacts not covered by the standard levels.
 ### Exclude Directory Patterns
 
 ```powershell
-pwsh -File .\delphi-clean.ps1 -ExcludeDirPattern 'vendor*'
-pwsh -File .\delphi-clean.ps1 -ExcludeDirPattern 'vendor*','assets'
+pwsh -File .\delphi-clean.ps1 -ExcludeDirectoryPattern 'vendor*'
+pwsh -File .\delphi-clean.ps1 -ExcludeDirectoryPattern 'vendor*','assets'
 ```
 
 Skips any directory whose name matches one of the given wildcard patterns.
-Unlike `-ExcludeDirectories`, patterns are matched with `-like` so wildcards
-(`*`, `?`) are supported.
+Patterns are matched with `-like` so wildcards (`*`, `?`) are supported.
+
+Specific directories are excluded by default: `.git`, `.vs`, and `.claude`.
 
 ---
 
@@ -220,6 +211,18 @@ Includes everything in `standard`, plus:
 - Backup files (`*.~*`)
 - FinalBuilder related files (logs, breakpoint, lock)
 - TestInsight custom settings
+
+---
+
+## Exit Codes
+
+```text
+  0 = success: every matched item was removed (or WhatIf run, or nothing to clean)
+  1 = fatal:   unhandled exception before or during the scan phase - bad root path,
+               unsupported platform for -RecycleBin, scan error, etc.
+  2 = partial: the script reached the removal phase but at least one item could not
+               be deleted or recycled; successfully removed items are not rolled back
+```
 
 ---
 
