@@ -571,7 +571,7 @@ function Remove-FileList {
                 # CHANGE: increment FailedCount instead of only writing a warning,
                 # so the caller knows at least one deletion did not succeed.
                 $result.FailedCount++
-                Write-Warning "Failed to $($action.ToLower()): $($file.FullName) — $($_.Exception.Message)"
+                Write-Warning "Failed to $($action.ToLower()): $($file.FullName) - $($_.Exception.Message)"
 
                 if ($ReturnRecords) {
                     $result.Records.Add((ConvertTo-DeletionRecord -Type File -Path $file.FullName -Deleted $false))
@@ -644,7 +644,7 @@ function Remove-DirectoryList {
             }
             catch {
                 $result.FailedCount++
-                Write-Warning "Failed to $($action.ToLower()): $($dir.FullName) — $($_.Exception.Message)"
+                Write-Warning "Failed to $($action.ToLower()): $($dir.FullName) - $($_.Exception.Message)"
 
                 if ($ReturnRecords) {
                     $result.Records.Add((ConvertTo-DeletionRecord -Type Directory -Path $dir.FullName -Deleted $false))
@@ -784,7 +784,7 @@ try {
 
     # Exit code contract:
     #   0 = success: every matched item was removed (or WhatIf run, or nothing to clean)
-    #   1 = fatal:   unhandled exception before or during the scan phase — bad root path,
+    #   1 = fatal:   unhandled exception before or during the scan phase - bad root path,
     #                unsupported platform for -RecycleBin, scan error, etc. (catch block below)
     #   2 = partial: the script reached the removal phase but at least one item could not
     #                be deleted or recycled; successfully removed items are not rolled back
