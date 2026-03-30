@@ -580,8 +580,11 @@ function Remove-FileList {
                 }
             }
         }
-        elseif ($ReturnRecords -and $WhatIfPreference) {
-            $result.Records.Add((ConvertTo-DeletionRecord -Type File -Path $file.FullName -Deleted $false))
+        elseif ($WhatIfPreference) {
+            Write-Information "Would $($action.ToLower()): $($file.FullName)" -InformationAction Continue
+            if ($ReturnRecords) {
+                $result.Records.Add((ConvertTo-DeletionRecord -Type File -Path $file.FullName -Deleted $false))
+            }
         }
     }
 
@@ -643,8 +646,11 @@ function Remove-DirectoryList {
                 }
             }
         }
-        elseif ($ReturnRecords -and $WhatIfPreference) {
-            $result.Records.Add((ConvertTo-DeletionRecord -Type Directory -Path $dir.FullName -Deleted $false))
+        elseif ($WhatIfPreference) {
+            Write-Information "Would $($action.ToLower()): $($dir.FullName)" -InformationAction Continue
+            if ($ReturnRecords) {
+                $result.Records.Add((ConvertTo-DeletionRecord -Type Directory -Path $dir.FullName -Deleted $false))
+            }
         }
     }
 
