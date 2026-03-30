@@ -85,7 +85,7 @@ param(
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 
-$ToolVersion = '0.8.0'
+$script:ToolVersion = '0.8.0'
 
 if ($Version) {
     if ($Format -eq 'json') {
@@ -94,12 +94,12 @@ if ($Version) {
             command = 'version'
             tool    = [PSCustomObject]@{
                 name    = 'delphi-clean'
-                version = $ToolVersion
+                version = $script:ToolVersion
             }
         } | ConvertTo-Json -Depth 3 -Compress
     }
     else {
-        Write-Output "delphi-clean $ToolVersion"
+        Write-Output "delphi-clean $script:ToolVersion"
     }
     exit 0
 }
