@@ -62,7 +62,7 @@ pwsh -File .\delphi-clean.ps1
 Defaults to:
 
 - Level: `basic`
-- Root: parent directory of the script
+- RootPath: current directory of the script
 
 ---
 
