@@ -34,7 +34,7 @@ powershell.exe -File .\delphi-clean.ps1 -Level standard -Json
 powershell.exe -File .\delphi-clean.ps1 -Level basic -IncludeFilePattern '*.res'
 
 .EXAMPLE
-powershell.exe -File .\delphi-clean.ps1 -Level basic -IncludeFilePattern '*.res','*.mab' -ExcludeDirPattern 'assets','vendor*'
+powershell.exe -File .\delphi-clean.ps1 -Level basic -IncludeFilePattern '*.res','*.mab' -ExcludeDirectoryPattern 'assets','vendor*'
 
 .EXAMPLE
 powershell.exe -File .\delphi-clean.ps1 -Version
@@ -63,7 +63,7 @@ param(
     [string]$RootPath,
 
     [Parameter(ParameterSetName = 'Clean')]
-    [string[]]$ExcludeDirectories = @(
+    [string[]]$ExcludeDirectoryPattern = @(
         '.git',
         '.vs',
         '.claude'
@@ -71,9 +71,6 @@ param(
 
     [Parameter(ParameterSetName = 'Clean')]
     [string[]]$IncludeFilePattern = @(),
-
-    [Parameter(ParameterSetName = 'Clean')]
-    [string[]]$ExcludeDirPattern = @(),
 
     [Parameter(ParameterSetName = 'Clean')]
     [switch]$PassThru,
@@ -88,7 +85,7 @@ param(
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 
-$script:ToolVersion = '0.7.0'
+$ToolVersion = '0.7.0'
 
 if ($Version) {
     if ($Format -eq 'json') {
@@ -97,12 +94,12 @@ if ($Version) {
             command = 'version'
             tool    = [PSCustomObject]@{
                 name    = 'delphi-clean'
-                version = $script:ToolVersion
+                version = $ToolVersion
             }
         } | ConvertTo-Json -Depth 3 -Compress
     }
     else {
-        Write-Output "delphi-clean $script:ToolVersion"
+        Write-Output "delphi-clean $ToolVersion"
     }
     exit 0
 }
@@ -296,10 +293,6 @@ function Test-SafeCleanRoot {
     if (-not $resolved) {
       throw "Invalid root path: $fullRoot"
     }
-
-    if ($fullRoot.TrimEnd([char[]]@('\','/')).Length -lt 4) {
-        throw "Refusing to clean an unsafe root path: $fullRoot"
-    }
 }
 
 function Test-PathUnderExcludedDirectory {
@@ -311,9 +304,7 @@ function Test-PathUnderExcludedDirectory {
         [string]$Root,
 
         [Parameter(Mandatory)]
-        [string[]]$ExcludedDirectoryNames,
-
-        [string[]]$ExcludedDirPatterns = @()
+        [string[]]$ExcludedDirPatterns
     )
 
     $relative = Get-RelativePathCompat -BasePath $Root -TargetPath $FullName
@@ -322,11 +313,8 @@ function Test-PathUnderExcludedDirectory {
         return $false
     }
 
-    $parts = $relative -split '[\\/]'
+    $parts = $relative -split '[\\\/]'
     foreach ($part in $parts) {
-        if ($ExcludedDirectoryNames -icontains $part) {
-            return $true
-        }
         foreach ($pattern in $ExcludedDirPatterns) {
             if ($part -ilike $pattern) {
                 return $true
@@ -452,16 +440,14 @@ function Get-FilesToDelete {
         [string[]]$Patterns,
 
         [Parameter(Mandatory)]
-        [string[]]$ExcludedDirectoryNames,
-
-        [string[]]$ExcludedDirPatterns = @()
+        [string[]]$ExcludedDirPatterns
     )
 
     Write-Verbose 'Scanning for matching files.'
 
     $allFiles = Get-ChildItem -Path $Root -Recurse -File -Force -ErrorAction SilentlyContinue |
         Where-Object {
-            -not (Test-PathUnderExcludedDirectory -FullName $_.FullName -Root $Root -ExcludedDirectoryNames $ExcludedDirectoryNames -ExcludedDirPatterns $ExcludedDirPatterns)
+            -not (Test-PathUnderExcludedDirectory -FullName $_.FullName -Root $Root -ExcludedDirPatterns $ExcludedDirPatterns)
         }
 
     $allFiles |
@@ -486,9 +472,7 @@ function Get-DirectoriesToDelete {
         [string[]]$DirectoryNames,
 
         [Parameter(Mandatory)]
-        [string[]]$ExcludedDirectoryNames,
-
-        [string[]]$ExcludedDirPatterns = @()
+        [string[]]$ExcludedDirPatterns
     )
 
     Write-Verbose 'Scanning for matching directories.'
@@ -501,7 +485,7 @@ function Get-DirectoriesToDelete {
     Get-ChildItem -Path $Root -Recurse -Directory -Force -ErrorAction SilentlyContinue |
         Where-Object {
             $nameSet.ContainsKey($_.Name.ToUpperInvariant()) -and
-            -not (Test-PathUnderExcludedDirectory -FullName $_.FullName -Root $Root -ExcludedDirectoryNames $ExcludedDirectoryNames -ExcludedDirPatterns $ExcludedDirPatterns)
+            -not (Test-PathUnderExcludedDirectory -FullName $_.FullName -Root $Root -ExcludedDirPatterns $ExcludedDirPatterns)
         } |
         Sort-Object -Property FullName -Unique |
         Sort-Object -Property { $_.FullName.Length } -Descending
@@ -537,7 +521,6 @@ function Remove-FileList {
 
     $result = [PSCustomObject]@{
         DeletedCount = 0
-        # CHANGE: track per-item failures so the caller can set a non-zero exit code
         FailedCount  = 0
         Records      = New-Object System.Collections.Generic.List[object]
     }
@@ -568,8 +551,6 @@ function Remove-FileList {
                 }
             }
             catch {
-                # CHANGE: increment FailedCount instead of only writing a warning,
-                # so the caller knows at least one deletion did not succeed.
                 $result.FailedCount++
                 Write-Warning "Failed to $($action.ToLower()): $($file.FullName) - $($_.Exception.Message)"
 
@@ -599,7 +580,6 @@ function Remove-DirectoryList {
 
     $result = [PSCustomObject]@{
         DeletedCount = 0
-        # CHANGE: track per-item failures so the caller can set a non-zero exit code
         FailedCount  = 0
         Records      = New-Object System.Collections.Generic.List[object]
     }
@@ -678,10 +658,7 @@ try {
     if (-not $Json) {
         Write-Information ('Level           : {0}' -f $Level) -InformationAction Continue
         Write-Information ('Root            : {0}' -f $cleanRoot) -InformationAction Continue
-        Write-Information ('Excluded dirs   : {0}' -f ($ExcludeDirectories -join ', ')) -InformationAction Continue
-        if ($ExcludeDirPattern.Count -gt 0) {
-            Write-Information ('Excl dir patterns: {0}' -f ($ExcludeDirPattern -join ', ')) -InformationAction Continue
-        }
+        Write-Information ('Excluded dirs   : {0}' -f ($ExcludeDirectoryPattern -join ', ')) -InformationAction Continue
         if ($IncludeFilePattern.Count -gt 0) {
             Write-Information ('Extra patterns  : {0}' -f ($IncludeFilePattern -join ', ')) -InformationAction Continue
         }
@@ -689,8 +666,8 @@ try {
         Write-Information ('Disposition     : {0}' -f $disposition) -InformationAction Continue
     }
 
-    $filesToDelete = @(Get-FilesToDelete -Root $cleanRoot -Patterns $allFilePatterns -ExcludedDirectoryNames $ExcludeDirectories -ExcludedDirPatterns $ExcludeDirPattern)
-    $dirsToDelete  = @(Get-DirectoriesToDelete -Root $cleanRoot -DirectoryNames $definition.DirectoryNames -ExcludedDirectoryNames $ExcludeDirectories -ExcludedDirPatterns $ExcludeDirPattern)
+    $filesToDelete = @(Get-FilesToDelete -Root $cleanRoot -Patterns $allFilePatterns -ExcludedDirPatterns $ExcludeDirectoryPattern)
+    $dirsToDelete  = @(Get-DirectoriesToDelete -Root $cleanRoot -DirectoryNames $definition.DirectoryNames -ExcludedDirPatterns $ExcludeDirectoryPattern)
 
     if (-not $Json) {
         Write-Information '' -InformationAction Continue
@@ -704,17 +681,15 @@ try {
             [PSCustomObject]@{
                 Level               = $Level
                 Root                = $cleanRoot
-                ExcludedDirectories = @($ExcludeDirectories)
-                ExcludeDirPattern   = @($ExcludeDirPattern)
-                IncludeFilePattern  = @($IncludeFilePattern)
-                Mode                = $mode
-                Disposition         = $disposition
-                RecycleBin          = $RecycleBin.IsPresent
-                FilesFound          = 0
+                ExcludeDirectoryPattern = @($ExcludeDirectoryPattern)
+                IncludeFilePattern      = @($IncludeFilePattern)
+                Mode                    = $mode
+                Disposition             = $disposition
+                RecycleBin              = $RecycleBin.IsPresent
+                FilesFound              = 0
                 DirectoriesFound    = 0
                 FilesDeleted        = 0
                 DirectoriesDeleted  = 0
-                # CHANGE: include failure counts in JSON output for consistency
                 FilesFailed         = 0
                 DirectoriesFailed   = 0
                 Items               = @()
@@ -725,6 +700,7 @@ try {
             Write-Information 'Nothing to clean.' -InformationAction Continue
         }
 
+        Write-Verbose 'Exit code = 0'
         exit 0
     }
 
@@ -736,25 +712,21 @@ try {
     $allRecords.AddRange([object[]]$fileRemovalResult.Records)
     $allRecords.AddRange([object[]]$dirRemovalResult.Records)
 
-    # CHANGE: sum failures across both removal passes to determine final exit code
     $totalFailed = $fileRemovalResult.FailedCount + $dirRemovalResult.FailedCount
 
     if ($Json) {
         [PSCustomObject]@{
             Level               = $Level
             Root                = $cleanRoot
-            ExcludedDirectories = @($ExcludeDirectories)
-            ExcludeDirPattern   = @($ExcludeDirPattern)
-            IncludeFilePattern  = @($IncludeFilePattern)
-            Mode                = $mode
+            ExcludeDirectoryPattern = @($ExcludeDirectoryPattern)
+            IncludeFilePattern      = @($IncludeFilePattern)
+            Mode                    = $mode
             Disposition         = $disposition
             RecycleBin          = $RecycleBin.IsPresent
             FilesFound          = $filesToDelete.Count
             DirectoriesFound    = $dirsToDelete.Count
             FilesDeleted        = $fileRemovalResult.DeletedCount
             DirectoriesDeleted  = $dirRemovalResult.DeletedCount
-            # CHANGE: expose failure counts in JSON output so callers can distinguish
-            # partial success (some deleted, some failed) from total failure
             FilesFailed         = $fileRemovalResult.FailedCount
             DirectoriesFailed   = $dirRemovalResult.FailedCount
             Items               = $allRecords
@@ -765,12 +737,12 @@ try {
         Write-Section 'Summary'
 
         if ($WhatIfPreference) {
-            Write-Information ('Files would be {0}      : {1}' -f $removedLabel, $filesToDelete.Count) -InformationAction Continue
+            Write-Information ('Files would be {0}     : {1}' -f $removedLabel, $filesToDelete.Count) -InformationAction Continue
             Write-Information ('Directories would be {0}: {1}' -f $removedLabel, $dirsToDelete.Count) -InformationAction Continue
         }
         else {
-            Write-Information ('Files {0}      : {1}' -f $removedLabel, $fileRemovalResult.DeletedCount) -InformationAction Continue
-            Write-Information ('Directories {0}: {1}' -f $removedLabel, $dirRemovalResult.DeletedCount) -InformationAction Continue
+            Write-Information ('Files {0}               : {1}' -f $removedLabel, $fileRemovalResult.DeletedCount) -InformationAction Continue
+            Write-Information ('Directories {0}         : {1}' -f $removedLabel, $dirRemovalResult.DeletedCount) -InformationAction Continue
 
             if ($totalFailed -gt 0) {
                 Write-Warning ('Items failed to {0}: {1}' -f $removedLabel, $totalFailed)
@@ -782,19 +754,22 @@ try {
         $allRecords
     }
 
-    # Exit code contract:
+    # Exit codes:
     #   0 = success: every matched item was removed (or WhatIf run, or nothing to clean)
     #   1 = fatal:   unhandled exception before or during the scan phase - bad root path,
     #                unsupported platform for -RecycleBin, scan error, etc. (catch block below)
     #   2 = partial: the script reached the removal phase but at least one item could not
     #                be deleted or recycled; successfully removed items are not rolled back
     if ($totalFailed -gt 0) {
-        exit 2
+      Write-Verbose 'Exit code = 2'
+      exit 2
     }
 
+    Write-Verbose 'Exit code = 0'
     exit 0
 }
 catch {
     Write-Error -ErrorRecord $_
+    Write-Verbose 'Exit code = 1'
     exit 1
 }
