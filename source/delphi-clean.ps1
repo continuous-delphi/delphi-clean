@@ -5,7 +5,7 @@
 Cleans Delphi build artifacts from a repository tree using three cleanup levels.
 
 .DESCRIPTION
-Runs from the tools location and targets the parent directory by default.
+Targets the current working directory by default.
 Supports three cleanup levels:
 
   basic  - safe, low-risk cleanup of common transient files
@@ -272,9 +272,7 @@ function Resolve-CleanRoot {
     )
 
     if ([string]::IsNullOrWhiteSpace($InputRoot)) {
-        $scriptDir = Split-Path -Parent $PSCommandPath
-        $resolved = Resolve-Path (Join-Path $scriptDir '..')
-        return $resolved.Path
+        return (Get-Location).Path
     }
 
     $resolvedInput = Resolve-Path $InputRoot
@@ -628,6 +626,15 @@ function Remove-DirectoryList {
                 else {
                     Remove-Item -LiteralPath $dir.FullName -Recurse -Force -ErrorAction Stop
                 }
+
+                # Verify the directory is actually gone. On some PowerShell versions
+                # Remove-Item -Recurse can silently partial-succeed when a handle is open
+                # (e.g. an open shell session in the directory), deleting children but
+                # leaving the directory itself without throwing.
+                if (Test-Path -LiteralPath $dir.FullName) {
+                    throw "Directory still exists after removal attempt (a process may have an open handle): $($dir.FullName)"
+                }
+
                 $result.DeletedCount++
                 Write-Information "$verb directory: $($dir.FullName)" -InformationAction Continue
 
@@ -636,8 +643,6 @@ function Remove-DirectoryList {
                 }
             }
             catch {
-                # CHANGE: increment FailedCount instead of only writing a warning,
-                # so the caller knows at least one deletion did not succeed.
                 $result.FailedCount++
                 Write-Warning "Failed to $($action.ToLower()): $($dir.FullName) — $($_.Exception.Message)"
 
@@ -758,13 +763,18 @@ try {
     else {
         $removedLabel = if ($RecycleBin) { 'recycled' } else { 'deleted' }
         Write-Section 'Summary'
-        Write-Information ('Files {0}      : {1}' -f $removedLabel, $fileRemovalResult.DeletedCount) -InformationAction Continue
-        Write-Information ('Directories {0}: {1}' -f $removedLabel, $dirRemovalResult.DeletedCount) -InformationAction Continue
 
-        # CHANGE: surface failure counts in the human-readable summary so failures are
-        # visible even when the caller does not inspect the exit code
-        if ($totalFailed -gt 0) {
-            Write-Warning ('Items failed to {0}: {1}' -f $removedLabel, $totalFailed)
+        if ($WhatIfPreference) {
+            Write-Information ('Files would be {0}      : {1}' -f $removedLabel, $filesToDelete.Count) -InformationAction Continue
+            Write-Information ('Directories would be {0}: {1}' -f $removedLabel, $dirsToDelete.Count) -InformationAction Continue
+        }
+        else {
+            Write-Information ('Files {0}      : {1}' -f $removedLabel, $fileRemovalResult.DeletedCount) -InformationAction Continue
+            Write-Information ('Directories {0}: {1}' -f $removedLabel, $dirRemovalResult.DeletedCount) -InformationAction Continue
+
+            if ($totalFailed -gt 0) {
+                Write-Warning ('Items failed to {0}: {1}' -f $removedLabel, $totalFailed)
+            }
         }
     }
 
