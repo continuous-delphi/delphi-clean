@@ -539,6 +539,8 @@ function Remove-FileList {
 
     $result = [PSCustomObject]@{
         DeletedCount = 0
+        # CHANGE: track per-item failures so the caller can set a non-zero exit code
+        FailedCount  = 0
         Records      = New-Object System.Collections.Generic.List[object]
     }
 
@@ -568,8 +570,14 @@ function Remove-FileList {
                 }
             }
             catch {
-                Write-Warning "Failed to $($action.ToLower()): $($file.FullName)"
-                Write-Error -ErrorRecord $_
+                # CHANGE: increment FailedCount instead of only writing a warning,
+                # so the caller knows at least one deletion did not succeed.
+                $result.FailedCount++
+                Write-Warning "Failed to $($action.ToLower()): $($file.FullName) — $($_.Exception.Message)"
+
+                if ($ReturnRecords) {
+                    $result.Records.Add((ConvertTo-DeletionRecord -Type File -Path $file.FullName -Deleted $false))
+                }
             }
         }
         elseif ($ReturnRecords -and $WhatIfPreference) {
@@ -590,6 +598,8 @@ function Remove-DirectoryList {
 
     $result = [PSCustomObject]@{
         DeletedCount = 0
+        # CHANGE: track per-item failures so the caller can set a non-zero exit code
+        FailedCount  = 0
         Records      = New-Object System.Collections.Generic.List[object]
     }
 
@@ -623,8 +633,14 @@ function Remove-DirectoryList {
                 }
             }
             catch {
-                Write-Warning "Failed to $($action.ToLower()): $($dir.FullName)"
-                Write-Error -ErrorRecord $_
+                # CHANGE: increment FailedCount instead of only writing a warning,
+                # so the caller knows at least one deletion did not succeed.
+                $result.FailedCount++
+                Write-Warning "Failed to $($action.ToLower()): $($dir.FullName) — $($_.Exception.Message)"
+
+                if ($ReturnRecords) {
+                    $result.Records.Add((ConvertTo-DeletionRecord -Type Directory -Path $dir.FullName -Deleted $false))
+                }
             }
         }
         elseif ($ReturnRecords -and $WhatIfPreference) {
@@ -687,6 +703,9 @@ try {
                 DirectoriesFound    = 0
                 FilesDeleted        = 0
                 DirectoriesDeleted  = 0
+                # CHANGE: include failure counts in JSON output for consistency
+                FilesFailed         = 0
+                DirectoriesFailed   = 0
                 Items               = @()
             } | ConvertTo-Json -Depth 5
         }
@@ -702,10 +721,12 @@ try {
     $fileRemovalResult = Remove-FileList -Files $filesToDelete -ReturnRecords:$returnRecords -RecycleBin:$RecycleBin
     $dirRemovalResult  = Remove-DirectoryList -Directories $dirsToDelete -ReturnRecords:$returnRecords -RecycleBin:$RecycleBin
 
-    #$allRecords = @($fileRemovalResult.Records) + @($dirRemovalResult.Records)
     $allRecords = New-Object System.Collections.Generic.List[object]
     $allRecords.AddRange([object[]]$fileRemovalResult.Records)
     $allRecords.AddRange([object[]]$dirRemovalResult.Records)
+
+    # CHANGE: sum failures across both removal passes to determine final exit code
+    $totalFailed = $fileRemovalResult.FailedCount + $dirRemovalResult.FailedCount
 
     if ($Json) {
         [PSCustomObject]@{
@@ -721,6 +742,10 @@ try {
             DirectoriesFound    = $dirsToDelete.Count
             FilesDeleted        = $fileRemovalResult.DeletedCount
             DirectoriesDeleted  = $dirRemovalResult.DeletedCount
+            # CHANGE: expose failure counts in JSON output so callers can distinguish
+            # partial success (some deleted, some failed) from total failure
+            FilesFailed         = $fileRemovalResult.FailedCount
+            DirectoriesFailed   = $dirRemovalResult.FailedCount
             Items               = $allRecords
         } | ConvertTo-Json -Depth 5
     }
@@ -729,10 +754,24 @@ try {
         Write-Section 'Summary'
         Write-Information ('Files {0}      : {1}' -f $removedLabel, $fileRemovalResult.DeletedCount) -InformationAction Continue
         Write-Information ('Directories {0}: {1}' -f $removedLabel, $dirRemovalResult.DeletedCount) -InformationAction Continue
+
+        # CHANGE: surface failure counts in the human-readable summary so failures are
+        # visible even when the caller does not inspect the exit code
+        if ($totalFailed -gt 0) {
+            Write-Warning ('Items failed to {0}: {1}' -f $removedLabel, $totalFailed)
+        }
     }
 
     if ($PassThru -and -not $Json) {
         $allRecords
+    }
+
+    # CHANGE: exit 2 when one or more items could not be deleted/recycled.
+    # exit 0 = success (all items removed)
+    # exit 1 = unhandled exception (catch block below)
+    # exit 2 = partial or total failure (at least one item could not be removed)
+    if ($totalFailed -gt 0) {
+        exit 2
     }
 
     exit 0
