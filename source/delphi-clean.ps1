@@ -85,7 +85,7 @@ param(
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 
-$ToolVersion = '0.7.0'
+$ToolVersion = '0.8.0'
 
 if ($Version) {
     if ($Format -eq 'json') {

@@ -4,10 +4,30 @@ All notable changes to this project will be documented in this file.
 
 ---
 
+## [0.8.0] 2026-03-30
+
+- Fix `-WhatIf` not displaying a summary of file+directory count to
+be deleted.
+  [#10](https://github.com/continuous-delphi/delphi-clean/issues/10)
+
+- Fix `-WhatIf` not displaying individual files+directories to be
+deleted.
+  [#13](https://github.com/continuous-delphi/delphi-clean/issues/13)
+
+- Combine `ExcludeDirPattern` and `ExcludeDirectories` into a
+single `ExcludeDirectoryPattern` parameter
+  [#14](https://github.com/continuous-delphi/delphi-clean/issues/14)
+
+- Document supported exit codes in Readme
+  [#11](https://github.com/continuous-delphi/delphi-clean/issues/11) 
+  
+- Debugging tool: output `Exit Code = #` when using `-Verbose`
+  [#12](https://github.com/continuous-delphi/delphi-clean/issues/12)
+
 ## [0.7.0] 2026-03-29
 
 - Move to "basic+standard+deep" cleanup levels
-  [#8](https://github.com/continuous-delphi/delphi-clean/issues/8)  
+  [#8](https://github.com/continuous-delphi/delphi-clean/issues/8)
 
 ## [0.6.0] 2026-03-26
 
