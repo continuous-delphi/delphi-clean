@@ -1,4 +1,24 @@
 #requires -Version 5.1
+# -----------------------------------------------------------------------------
+# delphi-clean
+#
+# A PowerShell utility to remove Delphi build artifacts, intermediate files,
+# and IDE-generated clutter, with support for preview, validation, and CI workflows.
+#
+# Part of Continuous-Delphi: Strengthening Delphi's continued success
+# https://github.com/continuous-delphi
+#
+# Project repository:
+# https://github.com/continuous-delphi/delphi-clean
+#
+# Also included in the Continuous-Delphi PowerShell CI module:
+# https://github.com/continuous-delphi/delphi-powershell-ci
+#
+# Copyright (c) 2026 Darian Miller
+# Licensed under the MIT License.
+# https://opensource.org/licenses/MIT
+# SPDX-License-Identifier: MIT
+# -----------------------------------------------------------------------------
 
 <#
 .SYNOPSIS
