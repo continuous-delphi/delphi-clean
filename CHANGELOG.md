@@ -4,6 +4,14 @@ All notable changes to this project will be documented in this file.
 
 ---
 
+## [0.9.0] 2026-03-30
+
+- Add `-Check` for simple 0:clean, 1:dirty check
+- Add `-OutputLevel` with `detailed`, `summary`, `quiet` options
+to control the amount of output
+  [#17](https://github.com/continuous-delphi/delphi-clean/issues/17)
+
+
 ## [0.8.0] 2026-03-30
 
 - Fix `-WhatIf` not displaying a summary of file+directory count to
