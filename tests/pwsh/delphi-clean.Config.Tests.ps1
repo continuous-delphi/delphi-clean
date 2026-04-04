@@ -314,6 +314,104 @@ Describe 'delphi-clean.ps1 configuration files' {
     }
 
     # -------------------------------------------------------------------------
+    Context '-ShowConfig flag' {
+
+        It '-ShowConfig exits 0 and does not clean files' {
+            $result = & $script:ToolPath -RootPath $script:TempRoot -ShowConfig
+            $LASTEXITCODE | Should -Be 0
+            Test-Path -LiteralPath (Join-Path $script:TempRoot 'src\Unit1.dcu') | Should -BeTrue
+        }
+
+        It '-ShowConfig output contains effective Level' {
+            @{ level = 'standard' } | ConvertTo-Json |
+                Set-Content -LiteralPath (Join-Path $script:TempRoot 'delphi-clean.json')
+
+            # ShowConfig writes to the Information stream (stream 6); redirect to capture it
+            $output = (& $script:ToolPath -RootPath $script:TempRoot -ShowConfig 6>&1) -join ' '
+
+            $output | Should -Match 'standard'
+        }
+
+        It '-ShowConfig -Json returns parseable object with correct fields' {
+            @{ level = 'standard'; outputLevel = 'summary' } | ConvertTo-Json |
+                Set-Content -LiteralPath (Join-Path $script:TempRoot 'delphi-clean.json')
+
+            $jsonText = & $script:ToolPath -RootPath $script:TempRoot -ShowConfig -Json
+            $obj = $jsonText | ConvertFrom-Json
+
+            $obj.Level       | Should -Be 'standard'
+            $obj.OutputLevel | Should -Be 'summary'
+            $obj.Root        | Should -Not -BeNullOrEmpty
+            $obj.ExcludeDirectoryPattern | Should -Not -BeNullOrEmpty
+        }
+
+        It '-ShowConfig -Json ConfigSources lists found config files' {
+            @{ level = 'deep' } | ConvertTo-Json |
+                Set-Content -LiteralPath (Join-Path $script:TempRoot 'delphi-clean.json')
+
+            $jsonText = & $script:ToolPath -RootPath $script:TempRoot -ShowConfig -Json
+            $obj = $jsonText | ConvertFrom-Json
+
+            ($obj.ConfigSources | Where-Object { $_ -like '*project-level*' }) | Should -Not -BeNullOrEmpty
+        }
+    }
+
+    # -------------------------------------------------------------------------
+    Context '-ConfigFile flag' {
+
+        It '-ConfigFile applies level from the explicit file' {
+            $cfgFile = Join-Path $script:TempRoot 'ci.json'
+            @{ level = 'standard' } | ConvertTo-Json | Set-Content -LiteralPath $cfgFile
+
+            & $script:ToolPath -RootPath $script:TempRoot -ConfigFile $cfgFile | Out-Null
+
+            Test-Path -LiteralPath (Join-Path $script:TempRoot 'src\App.exe') | Should -BeFalse
+        }
+
+        It '-ConfigFile scalar overrides project-level config' {
+            @{ level = 'standard' } | ConvertTo-Json |
+                Set-Content -LiteralPath (Join-Path $script:TempRoot 'delphi-clean.json')
+            $cfgFile = Join-Path $script:TempRoot 'ci.json'
+            @{ level = 'basic' } | ConvertTo-Json | Set-Content -LiteralPath $cfgFile
+
+            & $script:ToolPath -RootPath $script:TempRoot -ConfigFile $cfgFile | Out-Null
+
+            Test-Path -LiteralPath (Join-Path $script:TempRoot 'src\Unit1.dcu') | Should -BeFalse
+            Test-Path -LiteralPath (Join-Path $script:TempRoot 'src\App.exe')   | Should -BeTrue
+        }
+
+        It 'CLI -Level overrides -ConfigFile level' {
+            $cfgFile = Join-Path $script:TempRoot 'ci.json'
+            @{ level = 'standard' } | ConvertTo-Json | Set-Content -LiteralPath $cfgFile
+
+            & $script:ToolPath -RootPath $script:TempRoot -ConfigFile $cfgFile -Level basic | Out-Null
+
+            Test-Path -LiteralPath (Join-Path $script:TempRoot 'src\App.exe') | Should -BeTrue
+        }
+
+        It '-ConfigFile warns when file does not exist' {
+            $missing = Join-Path $script:TempRoot 'does-not-exist.json'
+            $warnings = @()
+
+            & $script:ToolPath -RootPath $script:TempRoot -ConfigFile $missing -WarningVariable warnings | Out-Null
+
+            ($warnings -join ' ') | Should -Match 'not found'
+        }
+
+        It '-ConfigFile array appends to project-level array' {
+            @{ includeFilePattern = @('*.res') } | ConvertTo-Json |
+                Set-Content -LiteralPath (Join-Path $script:TempRoot 'delphi-clean.json')
+            $cfgFile = Join-Path $script:TempRoot 'ci.json'
+            @{ includeFilePattern = @('*.~pas') } | ConvertTo-Json | Set-Content -LiteralPath $cfgFile
+
+            & $script:ToolPath -RootPath $script:TempRoot -Level basic -ConfigFile $cfgFile | Out-Null
+
+            Test-Path -LiteralPath (Join-Path $script:TempRoot 'src\Icon.res') | Should -BeFalse
+            Test-Path -LiteralPath (Join-Path $script:TempRoot 'src\App.~pas') | Should -BeFalse
+        }
+    }
+
+    # -------------------------------------------------------------------------
     Context 'fixture files' {
 
         It 'monorepo-root fixture is valid JSON and contains expected keys' {

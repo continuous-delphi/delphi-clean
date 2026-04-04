@@ -5,7 +5,7 @@ per-project and per-user preferences so you do not have to repeat them on the
 command line every time.  
 
 Configuration files are hierarchical in nature: 
-`$HOME < traversed parents < project < local < CLI`
+`$HOME < traversed parents < project < local < -ConfigFile < CLI`
 
 ---
 
@@ -30,7 +30,8 @@ Sources are listed from lowest to highest priority:
 $HOME/delphi-clean.json          (user-level)
   <RootPath>/delphi-clean.json   (project-level)
     <RootPath>/delphi-clean.local.json  (local user overrides)
-      command-line parameters           (highest priority)
+      -ConfigFile <path>                (explicit file, e.g. for CI)
+        command-line parameters         (highest priority)
 ```
 
 ---
@@ -90,6 +91,45 @@ represent invocation-specific behavior rather than persistent preferences.
 
 ---
 
+## `-ConfigFile` -- explicit config path
+
+Pass an explicit JSON config file path on the command line to inject a config
+at the highest priority below CLI parameters. This is useful in CI pipelines
+where the config lives outside the repository tree, or when testing a config
+before committing it:
+
+```powershell
+delphi-clean -RootPath C:/code/myproject -ConfigFile C:/ci/delphi-clean-ci.json
+```
+
+`-ConfigFile` uses the same JSON format as the project-level file. Its scalars
+override everything in the fixed-location hierarchy; its arrays append after
+(and deduplicate with) items from all lower-priority sources.
+
+---
+
+## `-ShowConfig` -- inspect the effective configuration
+
+Pass `-ShowConfig` to display the merged configuration that would be used for
+the current invocation and exit without scanning or cleaning. No files are
+modified.
+
+```powershell
+delphi-clean -RootPath C:/code/myproject -ShowConfig
+```
+
+The output lists every config file that was loaded and the final effective
+value for each property, including built-in excluded directories and any
+CLI overrides already applied.
+
+Add `-Json` to get machine-readable output:
+
+```powershell
+delphi-clean -RootPath C:/code/myproject -ShowConfig -Json
+```
+
+---
+
 ## Upward traversal (`searchParentFolders`)
 
 By default, `delphi-clean` reads only the three fixed locations listed above.
@@ -124,7 +164,8 @@ $HOME/delphi-clean.json          (user-level, lowest -- searchParentFolders igno
       <parent>/delphi-clean.json (nearest parent found via traversal)
         <RootPath>/delphi-clean.json   (project-level)
           <RootPath>/delphi-clean.local.json  (local user overrides)
-            command-line parameters           (highest priority)
+            -ConfigFile <path>                (explicit file, e.g. for CI)
+              command-line parameters         (highest priority)
 ```
 
 Traversed parent configs slot between the user-level `$HOME` config and the

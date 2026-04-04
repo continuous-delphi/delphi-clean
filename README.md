@@ -49,8 +49,11 @@ and the newer PowerShell 7+ (`pwsh`).
 - Add extra file patterns with `-IncludeFilePattern`
 - Exclude directories by wildcard pattern with `-ExcludeDirectoryPattern`
 - Send items to the recycle bin / trash instead of permanent deletion with `-RecycleBin`
-- Use `-OutputLevel` to adjust how much detail is shown.
-- Check for cleanup artifacts without modifying files using `-Check`.
+- Use `-OutputLevel` to adjust how much detail is shown
+- Check for cleanup artifacts without modifying files using `-Check`
+- JSON configuration file hierarchy (`$HOME`, project-level, local override, `-ConfigFile`)
+- Inspect the effective merged configuration with `-ShowConfig`
+- Inject a CI-specific config file via `-ConfigFile`
 
 ---
 
@@ -113,18 +116,22 @@ delphi-clean -PassThru
 
 ## -Json
 
-Outputs a JSON summary including:
+Outputs a single JSON object to standard output. All other output (text, progress)
+is suppressed. Key fields include:
 
-- Files found
-- Directories found
-- Files deleted
-- Directories deleted
-- Item-level details
+- `Level`, `Root`, `Mode` -- invocation metadata
+- `FilesFound`, `DirectoriesFound` -- items discovered during scan
+- `FilesDeleted`, `DirectoriesDeleted` -- items actually removed
+- `BytesFreed` -- total bytes freed (or would-be freed in `-WhatIf`/`-Check`)
+- `DurationMs` -- elapsed time in milliseconds
 - `Disposition` (`Permanent` or `Recycle Bin`) and `RecycleBin` flag
+- `Items[]` -- per-item records with `Type`, `Path`, `Deleted`, and `Size` (bytes)
 
 ```powershell
 delphi-clean -Json
 ```
+
+See [docs/json-output.md](docs/json-output.md) for the full field reference.
 
 ---
 
@@ -321,6 +328,73 @@ Notes:
 Check vs WhatIf:
 - Use `-WhatIf` to preview what a cleanup run would do
 - Use `-Check` to determine whether cleanup is needed (with exit code support)
+
+---
+
+## -ShowConfig
+
+Displays the effective merged configuration that would be used for the current
+invocation, then exits without scanning or cleaning. No files are modified.
+
+```powershell
+delphi-clean -ShowConfig
+delphi-clean -ShowConfig -Json
+```
+
+The output lists every config file that was found and loaded, plus the final
+resolved value for each property (including built-in excluded directories and
+any CLI overrides already applied).
+
+---
+
+## -ConfigFile
+
+Injects an explicit JSON configuration file at the highest config priority
+(above project-level and local files, below command-line parameters). Useful
+in CI pipelines where the config lives outside the repository tree, or when
+testing a config before committing it.
+
+```powershell
+delphi-clean -ConfigFile C:/ci/delphi-clean-ci.json -Level standard
+```
+
+The file uses the same JSON format as `delphi-clean.json`. See
+[docs/configuration.md](docs/configuration.md) for the full key reference.
+
+---
+
+## Configuration Files
+
+`delphi-clean` supports optional JSON configuration files so you can encode
+per-project and per-user preferences without repeating them on the command line.
+
+Config sources, from lowest to highest priority:
+
+```
+$HOME/delphi-clean.json          user-level defaults
+  <RootPath>/delphi-clean.json   project-level (commit with the repo)
+    <RootPath>/delphi-clean.local.json  local user overrides (add to .gitignore)
+      -ConfigFile <path>                explicit file (e.g. for CI)
+        command-line parameters         highest priority
+```
+
+**Scalars override** -- the highest-priority source wins.
+**Arrays append** -- items from all sources are combined; duplicates are removed.
+
+Example `delphi-clean.json` (project-level):
+
+```json
+{
+  "level": "standard",
+  "outputLevel": "summary",
+  "includeFilePattern": ["*.res"],
+  "excludeDirectoryPattern": ["assets"],
+  "searchParentFolders": false
+}
+```
+
+See [docs/configuration.md](docs/configuration.md) for the full reference,
+including upward traversal (`searchParentFolders`) and monorepo patterns.
 
 ---
 

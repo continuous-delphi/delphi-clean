@@ -66,6 +66,71 @@ Describe 'delphi-clean.ps1 integration tests' {
     @($result.Items).Count | Should -BeGreaterThan 0
   }
 
+  It 'JSON output includes DurationMs as a non-negative integer' {
+    $jsonText = & $script:ToolPath -RootPath $script:TempRoot -Level standard -Json -WhatIf
+    $result = $jsonText | ConvertFrom-Json
+
+    $result.PSObject.Properties.Name | Should -Contain 'DurationMs'
+    $result.DurationMs | Should -BeGreaterOrEqual 0
+  }
+
+  It 'JSON output includes DurationMs when nothing to clean' {
+    # Use a root with no artifacts so the nothing-to-clean path is taken
+    $emptyRoot = Join-Path ([System.IO.Path]::GetTempPath()) ("delphi-clean-empty-" + [guid]::NewGuid().ToString('N'))
+    New-Item -ItemType Directory -Path $emptyRoot | Out-Null
+    try {
+      $jsonText = & $script:ToolPath -RootPath $emptyRoot -Level standard -Json
+      $result = $jsonText | ConvertFrom-Json
+
+      $result.PSObject.Properties.Name | Should -Contain 'DurationMs'
+      $result.DurationMs | Should -BeGreaterOrEqual 0
+    }
+    finally {
+      Remove-Item -LiteralPath $emptyRoot -Recurse -Force -ErrorAction SilentlyContinue
+    }
+  }
+
+  It 'JSON output includes DurationMs in -Check mode' {
+    $jsonText = & $script:ToolPath -RootPath $script:TempRoot -Level standard -Json -Check
+    $result = $jsonText | ConvertFrom-Json
+
+    $result.PSObject.Properties.Name | Should -Contain 'DurationMs'
+    $result.DurationMs | Should -BeGreaterOrEqual 0
+  }
+
+  It 'JSON Items have a Size property on file records' {
+    $jsonText = & $script:ToolPath -RootPath $script:TempRoot -Level standard -Json -WhatIf
+    $result = $jsonText | ConvertFrom-Json
+
+    $fileItem = @($result.Items) | Where-Object { $_.Type -eq 'File' } | Select-Object -First 1
+    $fileItem | Should -Not -BeNullOrEmpty
+    $fileItem.PSObject.Properties.Name | Should -Contain 'Size'
+    $fileItem.Size | Should -BeGreaterOrEqual 0
+  }
+
+  It 'JSON Items have a Size property on directory records' {
+    $jsonText = & $script:ToolPath -RootPath $script:TempRoot -Level standard -Json -WhatIf
+    $result = $jsonText | ConvertFrom-Json
+
+    $dirItem = @($result.Items) | Where-Object { $_.Type -eq 'Directory' } | Select-Object -First 1
+    $dirItem | Should -Not -BeNullOrEmpty
+    $dirItem.PSObject.Properties.Name | Should -Contain 'Size'
+    $dirItem.Size | Should -BeGreaterOrEqual 0
+  }
+
+  It 'JSON Items file Size matches the actual file size on disk' {
+    # Write a file with known byte content so we can verify the reported size
+    $knownContent = 'A' * 128
+    Set-Content -LiteralPath (Join-Path $script:TempRoot 'source\App.map') -Value $knownContent -NoNewline -Encoding ASCII
+
+    $jsonText = & $script:ToolPath -RootPath $script:TempRoot -Level standard -Json -WhatIf
+    $result = $jsonText | ConvertFrom-Json
+
+    $mapItem = @($result.Items) | Where-Object { $_.Path -like '*App.map' } | Select-Object -First 1
+    $mapItem | Should -Not -BeNullOrEmpty
+    $mapItem.Size | Should -Be 128
+  }
+
   It 'removes build artifacts in standard level' {
     & $script:ToolPath -RootPath $script:TempRoot -Level standard | Out-Null
 
