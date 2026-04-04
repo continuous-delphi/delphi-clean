@@ -94,11 +94,7 @@ param(
     [string]$RootPath,
 
     [Parameter(ParameterSetName = 'Clean')]
-    [string[]]$ExcludeDirectoryPattern = @(
-        '.git',
-        '.vs',
-        '.claude'
-    ),
+    [string[]]$ExcludeDirectoryPattern = @(),
 
     [Parameter(ParameterSetName = 'Clean')]
     [string[]]$IncludeFilePattern = @(),
@@ -129,9 +125,10 @@ param(
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 
-$script:ToolVersion = '0.9.0'
+$script:ToolVersion        = '0.9.0'
 
-$script:OutputLevel = $OutputLevel
+$script:OutputLevel        = $OutputLevel
+$script:BuiltInExcludeDirs = @('.git', '.vs', '.claude')
 
 if ($Version) {
     if ($Format -eq 'json') {
@@ -405,6 +402,168 @@ function Test-PathUnderExcludedDirectory {
     }
 
     return $false
+}
+
+# ---------------------------------------------------------------------------
+# Configuration file helpers
+# ---------------------------------------------------------------------------
+
+function Get-ConfigValue {
+    param(
+        [object]$Config,
+        [Parameter(Mandatory)]
+        [string]$Key,
+        $Default = $null
+    )
+    if ($null -eq $Config) { return $Default }
+    $prop = $Config.PSObject.Properties[$Key]
+    if ($null -eq $prop) { return $Default }
+    return $prop.Value
+}
+
+function Read-ConfigFile {
+    param(
+        [Parameter(Mandatory)]
+        [string]$Path
+    )
+
+    if (-not (Test-Path -LiteralPath $Path)) {
+        return $null
+    }
+
+    try {
+        $content = Get-Content -LiteralPath $Path -Raw -Encoding UTF8
+        return $content | ConvertFrom-Json
+    }
+    catch {
+        Write-Warning "[config] Failed to parse '$Path': $($_.Exception.Message)"
+        return $null
+    }
+}
+
+function Merge-CleanConfig {
+    param(
+        [object[]]$Configs = @()
+    )
+
+    $resultLevel        = $null
+    $resultOutputLevel  = $null
+    $resultRecycleBin   = $null
+    $resultSearchParent = $null
+
+    $seenInclude   = New-Object 'System.Collections.Generic.HashSet[string]' -ArgumentList ([System.StringComparer]::OrdinalIgnoreCase)
+    $seenExclude   = New-Object 'System.Collections.Generic.HashSet[string]' -ArgumentList ([System.StringComparer]::OrdinalIgnoreCase)
+    $resultInclude = New-Object 'System.Collections.Generic.List[string]'
+    $resultExclude = New-Object 'System.Collections.Generic.List[string]'
+
+    foreach ($config in $Configs) {
+        if ($null -eq $config) { continue }
+
+        $val = Get-ConfigValue -Config $config -Key 'level'
+        if ($null -ne $val) { $resultLevel = $val }
+
+        $val = Get-ConfigValue -Config $config -Key 'outputLevel'
+        if ($null -ne $val) { $resultOutputLevel = $val }
+
+        $val = Get-ConfigValue -Config $config -Key 'recycleBin'
+        if ($null -ne $val) { $resultRecycleBin = $val }
+
+        $val = Get-ConfigValue -Config $config -Key 'searchParentFolders'
+        if ($null -ne $val) { $resultSearchParent = $val }
+
+        foreach ($item in @(Get-ConfigValue -Config $config -Key 'includeFilePattern' -Default @())) {
+            if (-not [string]::IsNullOrEmpty($item) -and $seenInclude.Add($item)) {
+                $resultInclude.Add($item)
+            }
+        }
+
+        foreach ($item in @(Get-ConfigValue -Config $config -Key 'excludeDirectoryPattern' -Default @())) {
+            if (-not [string]::IsNullOrEmpty($item) -and $seenExclude.Add($item)) {
+                $resultExclude.Add($item)
+            }
+        }
+    }
+
+    return [PSCustomObject]@{
+        level                   = $resultLevel
+        outputLevel             = $resultOutputLevel
+        recycleBin              = $resultRecycleBin
+        searchParentFolders     = $resultSearchParent
+        includeFilePattern      = @($resultInclude)
+        excludeDirectoryPattern = @($resultExclude)
+    }
+}
+
+function Resolve-EffectiveConfig {
+    param(
+        [Parameter(Mandatory)]
+        [string]$RootPath
+    )
+
+    # Allow test suites to redirect the home directory lookup
+    $homeDir = if (-not [string]::IsNullOrEmpty($env:DELPHI_CLEAN_HOME_OVERRIDE)) {
+        $env:DELPHI_CLEAN_HOME_OVERRIDE
+    }
+    else {
+        $HOME
+    }
+
+    $homeConfigPath    = Join-Path $homeDir 'delphi-clean.json'
+    $projectConfigPath = Join-Path $RootPath 'delphi-clean.json'
+    $localConfigPath   = Join-Path $RootPath 'delphi-clean.local.json'
+
+    $homeConfig    = Read-ConfigFile -Path $homeConfigPath
+    $projectConfig = Read-ConfigFile -Path $projectConfigPath
+    $localConfig   = Read-ConfigFile -Path $localConfigPath
+
+    Write-Verbose ("[config] user-level:     {0}" -f $(if ($null -ne $homeConfig)    { $homeConfigPath    } else { "$homeConfigPath (not found)" }))
+    Write-Verbose ("[config] project-level:  {0}" -f $(if ($null -ne $projectConfig) { $projectConfigPath } else { "$projectConfigPath (not found)" }))
+    Write-Verbose ("[config] local override: {0}" -f $(if ($null -ne $localConfig)   { $localConfigPath   } else { "$localConfigPath (not found)" }))
+
+    # Traversal is triggered only by the project-level or local config.
+    # searchParentFolders in the $HOME config is intentionally ignored.
+    $traversalRequested = ((Get-ConfigValue -Config $projectConfig -Key 'searchParentFolders') -eq $true) -or
+                          ((Get-ConfigValue -Config $localConfig   -Key 'searchParentFolders') -eq $true)
+
+    $traversedConfigs = @()
+
+    if ($traversalRequested) {
+        $current = Split-Path -Parent $RootPath
+
+        while (-not [string]::IsNullOrEmpty($current)) {
+            $parentConfigPath = Join-Path $current 'delphi-clean.json'
+            $parentConfig     = Read-ConfigFile -Path $parentConfigPath
+
+            if ($null -ne $parentConfig) {
+                # Prepend so farthest ancestor ends up first (lowest priority among traversed)
+                $traversedConfigs = @($parentConfig) + $traversedConfigs
+                Write-Verbose "[config] traversed:      $parentConfigPath"
+
+                if ((Get-ConfigValue -Config $parentConfig -Key 'searchParentFolders') -eq $false) {
+                    Write-Verbose '[config]   (stop marker -- traversal ends here)'
+                    break
+                }
+            }
+
+            $parent = Split-Path -Parent $current
+            if ($parent -eq $current) { break }  # filesystem root reached
+            $current = $parent
+        }
+    }
+
+    # Merge: lowest priority first
+    $allConfigs = @($homeConfig) + $traversedConfigs + @($projectConfig) + @($localConfig)
+    $merged = Merge-CleanConfig -Configs $allConfigs
+
+    Write-Verbose '[config] final merged values:'
+    Write-Verbose ("[config]   level                   = {0}" -f $(if ($null -ne $merged.level)               { $merged.level }               else { '(not set)' }))
+    Write-Verbose ("[config]   outputLevel             = {0}" -f $(if ($null -ne $merged.outputLevel)         { $merged.outputLevel }         else { '(not set)' }))
+    Write-Verbose ("[config]   recycleBin              = {0}" -f $(if ($null -ne $merged.recycleBin)          { "$($merged.recycleBin)" }     else { '(not set)' }))
+    Write-Verbose ("[config]   searchParentFolders     = {0}" -f $(if ($null -ne $merged.searchParentFolders) { "$($merged.searchParentFolders)" } else { '(not set)' }))
+    Write-Verbose ("[config]   includeFilePattern      = [{0}]" -f ($merged.includeFilePattern -join ', '))
+    Write-Verbose ("[config]   excludeDirectoryPattern = [{0}]" -f ($merged.excludeDirectoryPattern -join ', '))
+
+    return $merged
 }
 
 # ---------------------------------------------------------------------------
@@ -755,6 +914,51 @@ try {
 
     $cleanRoot = Resolve-CleanRoot -InputRoot $RootPath
     Test-SafeCleanRoot -Root $cleanRoot
+
+    # --- Load and apply configuration files ---
+    $effectiveConfig = Resolve-EffectiveConfig -RootPath $cleanRoot
+
+    # Scalars: config value applies only when the CLI did not explicitly supply the parameter
+    if ('Level' -notin $PSBoundParameters.Keys) {
+        $cfgVal = Get-ConfigValue -Config $effectiveConfig -Key 'level'
+        if ($null -ne $cfgVal) { $Level = $cfgVal }
+    }
+    if ('OutputLevel' -notin $PSBoundParameters.Keys) {
+        $cfgVal = Get-ConfigValue -Config $effectiveConfig -Key 'outputLevel'
+        if ($null -ne $cfgVal) {
+            $OutputLevel = $cfgVal
+            $script:OutputLevel = $OutputLevel
+        }
+    }
+    if ('RecycleBin' -notin $PSBoundParameters.Keys) {
+        if ((Get-ConfigValue -Config $effectiveConfig -Key 'recycleBin') -eq $true) {
+            $RecycleBin = [System.Management.Automation.SwitchParameter]::new($true)
+        }
+    }
+
+    # Arrays: built-ins + config + CLI, deduplicated (first-seen position preserved)
+    $seenExcludes   = New-Object 'System.Collections.Generic.HashSet[string]' -ArgumentList ([System.StringComparer]::OrdinalIgnoreCase)
+    $mergedExcludes = New-Object 'System.Collections.Generic.List[string]'
+    foreach ($d in $script:BuiltInExcludeDirs) {
+        if ($seenExcludes.Add($d)) { $mergedExcludes.Add($d) }
+    }
+    foreach ($d in @($effectiveConfig.excludeDirectoryPattern)) {
+        if (-not [string]::IsNullOrEmpty($d) -and $seenExcludes.Add($d)) { $mergedExcludes.Add($d) }
+    }
+    foreach ($d in @($ExcludeDirectoryPattern)) {
+        if (-not [string]::IsNullOrEmpty($d) -and $seenExcludes.Add($d)) { $mergedExcludes.Add($d) }
+    }
+    $ExcludeDirectoryPattern = $mergedExcludes.ToArray()
+
+    $seenIncludes   = New-Object 'System.Collections.Generic.HashSet[string]' -ArgumentList ([System.StringComparer]::OrdinalIgnoreCase)
+    $mergedIncludes = New-Object 'System.Collections.Generic.List[string]'
+    foreach ($p in @($effectiveConfig.includeFilePattern)) {
+        if (-not [string]::IsNullOrEmpty($p) -and $seenIncludes.Add($p)) { $mergedIncludes.Add($p) }
+    }
+    foreach ($p in @($IncludeFilePattern)) {
+        if (-not [string]::IsNullOrEmpty($p) -and $seenIncludes.Add($p)) { $mergedIncludes.Add($p) }
+    }
+    $IncludeFilePattern = $mergedIncludes.ToArray()
 
     $definition    = Get-LevelDefinition -Name $Level
     $mode          = if ($Check) { 'Check (no changes)' } elseif ($WhatIfPreference) { 'WhatIf (no changes)' } else { 'Execute' }

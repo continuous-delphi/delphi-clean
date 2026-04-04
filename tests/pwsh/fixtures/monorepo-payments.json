@@ -1,0 +1,5 @@
+{
+  "level": "deep",
+  "includeFilePattern": ["*.res"],
+  "searchParentFolders": true
+}

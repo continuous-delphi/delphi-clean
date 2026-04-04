@@ -32,11 +32,19 @@ Describe 'delphi-clean.ps1 integration tests' {
     Set-Content -LiteralPath (Join-Path $script:TempRoot 'source\Win32\output.txt') -Value 'dummy'
     Set-Content -LiteralPath (Join-Path $script:TempRoot '.git\keep.dcu') -Value 'dummy'
     Set-Content -LiteralPath (Join-Path $script:TempRoot '.vs\keep.exe') -Value 'dummy'
+
+    # Redirect home config lookup so a real $HOME/delphi-clean.json does not affect results
+    $script:FakeHome = Join-Path ([System.IO.Path]::GetTempPath()) ("delphi-clean-home-" + [guid]::NewGuid().ToString('N'))
+    New-Item -ItemType Directory -Path $script:FakeHome | Out-Null
+    $env:DELPHI_CLEAN_HOME_OVERRIDE = $script:FakeHome
   }
 
   AfterEach {
-    if ($script:TempRoot -and (Test-Path -LiteralPath $script:TempRoot)) {
-      Remove-Item -LiteralPath $script:TempRoot -Recurse -Force -ErrorAction SilentlyContinue
+    $env:DELPHI_CLEAN_HOME_OVERRIDE = $null
+    foreach ($dir in @($script:TempRoot, $script:FakeHome)) {
+      if ($dir -and (Test-Path -LiteralPath $dir)) {
+        Remove-Item -LiteralPath $dir -Recurse -Force -ErrorAction SilentlyContinue
+      }
     }
   }
 

@@ -1,0 +1,5 @@
+{
+  "level": "standard",
+  "excludeDirectoryPattern": ["vendor*"],
+  "searchParentFolders": false
+}
