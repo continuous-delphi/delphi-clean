@@ -83,6 +83,56 @@ delphi-clean -RootPath C:\code\my-project
 
 ---
 
+## -Level
+
+### Clean Levels
+
+#### `basic` (default)
+
+Safe cleanup of common transient files.
+
+Includes:
+
+- `.dcu`, `.tmp`, `.bak`, `.identcache`
+- `__history`
+
+---
+
+#### `standard`
+
+Removes build outputs and generated artifacts.
+
+Includes everything in `basic`, plus:
+
+- Compiled binaries (`.exe`, `.bpl`, etc.)
+- Debug and release folders
+- Intermediate files
+
+---
+
+#### `deep`
+
+More aggressive cleanup
+
+Includes everything in `standard`, plus:
+
+- Backup files (`*.~*`)
+- FinalBuilder related files (logs, breakpoint, lock)
+- TestInsight custom settings
+
+Examples:
+
+```powershell
+delphi-clean -Level basic
+delphi-clean -Level standard
+delphi-clean -Level deep
+```
+
+See [/docs/cleanup-levels.md](/docs/cleanup-levels.md) for breakdown
+of what is included by default in each level
+
+---
+
 ## -WhatIf
 Preview cleanup without making changes. (Dry Run Mode)
 
@@ -178,57 +228,6 @@ making any changes.
 delphi-clean -RecycleBin
 delphi-clean -Level standard -RecycleBin
 ```
-
----
-
-## -Level
-
-### Clean Levels
-
-#### `basic` (default)
-
-Safe cleanup of common transient files.
-
-Includes:
-
-- `.dcu`, `.tmp`, `.bak`, `.identcache`
-- `__history`
-
----
-
-#### `standard`
-
-Removes build outputs and generated artifacts.
-
-Includes everything in `basic`, plus:
-
-- Compiled binaries (`.exe`, `.bpl`, etc.)
-- Debug and release folders
-- Intermediate files
-
----
-
-#### `deep`
-
-More aggressive cleanup
-
-Includes everything in `standard`, plus:
-
-- Backup files (`*.~*`)
-- FinalBuilder related files (logs, breakpoint, lock)
-- TestInsight custom settings
-
-Examples:
-
-```powershell
-delphi-clean -Level basic
-delphi-clean -Level standard
-delphi-clean -Level deep
-```
-
-See [/docs/cleanup-levels.md](/docs/cleanup-levels.md) for breakdown
-of what is included by default in each level
-
 
 ---
 
