@@ -4,6 +4,43 @@ All notable changes to this project will be documented in this file.
 
 ---
 
+## [0.10.0] 2026-04-04
+
+- Add JSON configuration file hierarchy
+  (`$HOME`, project-level, local override, `-ConfigFile`)
+  with scalar-override and array-append merge rules and optional
+  upward traversal via `searchParentFolders`
+  See `docs/configuration.md` for details.
+
+- Add `-ConfigFile <path>` to inject an explicit config file (e.g. for CI
+  pipelines) at highest config priority below command-line parameters.
+
+- Add `-ShowConfig` to display the effective merged configuration and exit
+  without scanning or cleaning. Supports `-Json` for machine-readable output.
+
+- Add freed-space reporting to the clean summary:
+  `Space freed : 142.3 MB` (text) or `BytesFreed` (JSON).
+  Also reported in `-Check` mode as `Space to free` and in `-WhatIf` mode
+  as `Space would free`.
+
+- Add elapsed time to all summaries (`Duration` in text, `DurationMs` in JSON).
+
+- Add `Size` (bytes) to every item in the JSON `Items` array, covering both
+  files (direct length) and directories (recursive sum computed before deletion).
+
+- Add `Write-Progress` feedback during file scan (updates every 500 files) and
+  during the deletion phase; suppressed when `-Json` is active.
+
+- Add cross-platform build artifact patterns to the `standard` level:
+  `*.o`, `*.a` (Linux/macOS object/static-lib), `*.dylib` (macOS dynamic lib).
+
+- Add `iOSSimulatorArm64` and `LinuxARM64` output directories to the
+  `standard` level for Delphi 12+ platform targets.
+
+- Add `*.mab` (MadExcept/JEDI debug map) to the `deep` level.
+
+---
+
 ## [0.9.0] 2026-03-30
 
 - Add `-Check` for simple 0:clean, 1:dirty check

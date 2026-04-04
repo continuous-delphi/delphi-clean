@@ -44,6 +44,9 @@ Includes everything in `basic, plus the following additional items.
 - `*.dcp`
 - `*.bpi`
 - `*.so`
+- `*.o`
+- `*.a`
+- `*.dylib`
 - `*.exe`
 - `*.hpp`
 - `*.dres`
@@ -67,7 +70,9 @@ Includes everything in `basic, plus the following additional items.
 - `Android`
 - `Android64`
 - `iOSDevice64`
+- `iOSSimulatorArm64`
 - `Linux64`
+- `LinuxARM64`
 - `TMSWeb`
 
 ---
@@ -88,6 +93,7 @@ Includes everything in `standard`, plus the following additional items.
 - `*.fbl8`
 - `*.fbpbrk`
 - `*.fb8lck`
+- `*.mab`
 - `TestInsightSettings.ini`
 
 

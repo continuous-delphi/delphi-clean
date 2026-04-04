@@ -1,0 +1,5 @@
+{
+  "outputLevel": "summary",
+  "recycleBin": false,
+  "excludeDirectoryPattern": ["vendor*"]
+}
