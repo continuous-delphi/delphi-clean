@@ -425,6 +425,6 @@ Until graduation, breaking changes may occur
 ## Continuous-Delphi
 
 This tool is part of the [Continuous-Delphi](https://github.com/continuous-delphi)
-ecosystem, focused on strengthening Delphi’s continued success
+ecosystem, focused on strengthening Delphi's continued success
 
 ![continuous-delphi logo](https://continuous-delphi.github.io/assets/logos/continuous-delphi-480x270.png)

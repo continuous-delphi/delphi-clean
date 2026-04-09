@@ -5,7 +5,7 @@
 # A PowerShell utility to remove Delphi build artifacts, intermediate files,
 # and IDE-generated clutter, with support for preview, validation, and CI workflows.
 #
-# Part of Continuous-Delphi: Strengthening Delphi's continued success
+# Part of Continuous-Delphi: Focused on strengthening Delphi's continued success
 # https://github.com/continuous-delphi
 #
 # Project repository:
