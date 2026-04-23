@@ -69,7 +69,7 @@ Describe 'delphi-clean.ps1 -RecycleBin tests' {
     Test-Path -LiteralPath (Join-Path $script:TempRoot 'source\Unit1.dcu') | Should -BeTrue
   }
 
-  It 'supports -RecycleBin when invoked from Windows PowerShell 5.1' {
+  It 'supports -RecycleBin when invoked from Windows PowerShell 5.1' -Skip:(-not $IsWindows) {
     powershell.exe -NoProfile -ExecutionPolicy Bypass -File $script:ToolPath -RootPath $script:TempRoot -Level basic -RecycleBin | Out-Null
 
     $LASTEXITCODE | Should -Be 0

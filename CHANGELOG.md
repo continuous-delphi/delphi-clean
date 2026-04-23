@@ -4,7 +4,7 @@ All notable changes to this project will be documented in this file.
 
 ---
 
-## [0.11.0] Unreleased
+## [0.11.0] 2026-04-23
 
 - Fix powershell (5.1) usage for recycle bin option
 

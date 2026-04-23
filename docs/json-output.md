@@ -150,7 +150,7 @@ When `-Version -Format json` is used, a version envelope is returned.
   "command": "version",
   "tool": {
     "name": "delphi-clean",
-    "version": "0.10.0"
+    "version": "0.11.0"
   }
 }
 ```
