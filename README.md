@@ -28,9 +28,9 @@ delphi-clean -Level standard
 Otherwise, run it directly:
 
 ```powershell
-pwsh -File .\delphi-clean.ps1 -Level standard
+pwsh -File .\source\delphi-clean.ps1 -Level standard
 # or
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\delphi-clean.ps1 -Level standard
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\source\delphi-clean.ps1 -Level standard
 ```
 
 ## PowerShell Compatibility

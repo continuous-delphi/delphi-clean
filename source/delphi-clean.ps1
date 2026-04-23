@@ -35,55 +35,55 @@ Supports three cleanup levels:
 Use -Check to audit without deleting. Use -OutputLevel to control verbosity.
 
 .EXAMPLE
-powershell.exe -File .\delphi-clean.ps1
+powershell.exe -File .\source\delphi-clean.ps1
 
 .EXAMPLE
-powershell.exe -File .\delphi-clean.ps1 -Level standard
+powershell.exe -File .\source\delphi-clean.ps1 -Level standard
 
 .EXAMPLE
-powershell.exe -File .\delphi-clean.ps1 -Level deep -Verbose
+powershell.exe -File .\source\delphi-clean.ps1 -Level deep -Verbose
 
 .EXAMPLE
-powershell.exe -File .\delphi-clean.ps1 -Level deep -WhatIf
+powershell.exe -File .\source\delphi-clean.ps1 -Level deep -WhatIf
 
 .EXAMPLE
-powershell.exe -File .\delphi-clean.ps1 -Level standard -PassThru
+powershell.exe -File .\source\delphi-clean.ps1 -Level standard -PassThru
 
 .EXAMPLE
-powershell.exe -File .\delphi-clean.ps1 -Level standard -Json
+powershell.exe -File .\source\delphi-clean.ps1 -Level standard -Json
 
 .EXAMPLE
-powershell.exe -File .\delphi-clean.ps1 -Level basic -IncludeFilePattern '*.res'
+powershell.exe -File .\source\delphi-clean.ps1 -Level basic -IncludeFilePattern '*.res'
 
 .EXAMPLE
-powershell.exe -File .\delphi-clean.ps1 -Level basic -IncludeFilePattern '*.res','*.mab' -ExcludeDirectoryPattern 'assets','vendor*'
+powershell.exe -File .\source\delphi-clean.ps1 -Level basic -IncludeFilePattern '*.res','*.mab' -ExcludeDirectoryPattern 'assets','vendor*'
 
 .EXAMPLE
-powershell.exe -File .\delphi-clean.ps1 -Version
+powershell.exe -File .\source\delphi-clean.ps1 -Version
 
 .EXAMPLE
-powershell.exe -File .\delphi-clean.ps1 -Version -Format json
+powershell.exe -File .\source\delphi-clean.ps1 -Version -Format json
 
 .EXAMPLE
-powershell.exe -File .\delphi-clean.ps1 -Level standard -RecycleBin
+powershell.exe -File .\source\delphi-clean.ps1 -Level standard -RecycleBin
 
 .EXAMPLE
-powershell.exe -File .\delphi-clean.ps1 -Level standard -Check
+powershell.exe -File .\source\delphi-clean.ps1 -Level standard -Check
 
 .EXAMPLE
-powershell.exe -File .\delphi-clean.ps1 -Level standard -Check -OutputLevel quiet
+powershell.exe -File .\source\delphi-clean.ps1 -Level standard -Check -OutputLevel quiet
 
 .EXAMPLE
-powershell.exe -File .\delphi-clean.ps1 -Level standard -OutputLevel summary
+powershell.exe -File .\source\delphi-clean.ps1 -Level standard -OutputLevel summary
 
 .EXAMPLE
-powershell.exe -File .\delphi-clean.ps1 -ShowConfig
+powershell.exe -File .\source\delphi-clean.ps1 -ShowConfig
 
 .EXAMPLE
-powershell.exe -File .\delphi-clean.ps1 -ShowConfig -Json
+powershell.exe -File .\source\delphi-clean.ps1 -ShowConfig -Json
 
 .EXAMPLE
-powershell.exe -File .\delphi-clean.ps1 -ConfigFile C:/ci/delphi-clean-ci.json -Level standard
+powershell.exe -File .\source\delphi-clean.ps1 -ConfigFile C:/ci/delphi-clean-ci.json -Level standard
 
 .PARAMETER Level
 Cleanup level to apply. One of: basic, standard, deep. Levels are cumulative --
@@ -117,7 +117,8 @@ CI pipelines and tooling integrations.
 .PARAMETER RecycleBin
 Send items to the platform recycle bin / trash instead of deleting them
 permanently. On Windows, uses Microsoft.VisualBasic.FileIO.FileSystem. On
-macOS, uses the 'trash' shell command. Not supported on Linux.
+macOS, moves items into `~/.Trash/`. On Linux, uses the FreeDesktop trash
+location under `~/.local/share/Trash/`.
 
 .PARAMETER Check
 Audit-only mode. Scans for artifacts but does not delete anything. Exits with
@@ -383,6 +384,32 @@ function Send-ToLinuxTrash {
     }
 }
 
+function Get-PlatformKind {
+    if (Get-Variable -Name IsWindows -ErrorAction SilentlyContinue) {
+        if ($IsWindows) { return 'Windows' }
+        if ($IsMacOS)   { return 'macOS' }
+        if ($IsLinux)   { return 'Linux' }
+    }
+
+    switch ([System.Environment]::OSVersion.Platform) {
+        'Win32NT' { return 'Windows' }
+        'Unix' {
+            try {
+                if ([System.IO.Directory]::Exists('/System/Library/CoreServices')) {
+                    return 'macOS'
+                }
+            }
+            catch {
+                Write-Verbose "Platform probe for macOS fallback failed: $($_.Exception.Message)"
+            }
+
+            return 'Linux'
+        }
+        'MacOSX' { return 'macOS' }
+        default  { return 'Unknown' }
+    }
+}
+
 function Send-ToRecycleBin {
     param(
         [Parameter(Mandatory)]
@@ -393,7 +420,9 @@ function Send-ToRecycleBin {
         [string]$Type
     )
 
-    if ($IsWindows) {
+    $platformKind = Get-PlatformKind
+
+    if ($platformKind -eq 'Windows') {
         Add-Type -AssemblyName Microsoft.VisualBasic -ErrorAction Stop
         if ($Type -eq 'File') {
             [Microsoft.VisualBasic.FileIO.FileSystem]::DeleteFile(
@@ -410,10 +439,10 @@ function Send-ToRecycleBin {
             )
         }
     }
-    elseif ($IsMacOS) {
+    elseif ($platformKind -eq 'macOS') {
         Send-ToMacTrash -Path $Path
     }
-    elseif ($IsLinux) {
+    elseif ($platformKind -eq 'Linux') {
         Send-ToLinuxTrash -Path $Path
     }
     else {
@@ -951,6 +980,7 @@ function Remove-FileList {
     $result = [PSCustomObject]@{
         DeletedCount = 0
         FailedCount  = 0
+        BytesFreed   = [long]0
         Records      = New-Object System.Collections.Generic.List[object]
     }
 
@@ -973,6 +1003,7 @@ function Remove-FileList {
                     Remove-Item -LiteralPath $file.FullName -Force -ErrorAction Stop
                 }
                 $result.DeletedCount++
+                $result.BytesFreed += $file.Length
                 Write-Detail "$verb file: $($file.FullName)"
 
                 if ($ReturnRecords) {
@@ -1010,6 +1041,7 @@ function Remove-DirectoryList {
     $result = [PSCustomObject]@{
         DeletedCount = 0
         FailedCount  = 0
+        BytesFreed   = [long]0
         Records      = New-Object System.Collections.Generic.List[object]
     }
 
@@ -1048,6 +1080,7 @@ function Remove-DirectoryList {
                 }
 
                 $result.DeletedCount++
+                $result.BytesFreed += $dirSize
                 Write-Detail "$verb directory: $($dir.FullName)"
 
                 if ($ReturnRecords) {
@@ -1320,6 +1353,7 @@ try {
     $allRecords.AddRange([object[]]$dirRemovalResult.Records)
 
     $totalFailed = $fileRemovalResult.FailedCount + $dirRemovalResult.FailedCount
+    $bytesFreed  = $fileRemovalResult.BytesFreed + $dirRemovalResult.BytesFreed
 
     if ($Json) {
         [PSCustomObject]@{
@@ -1337,7 +1371,7 @@ try {
             DirectoriesDeleted      = $dirRemovalResult.DeletedCount
             FilesFailed             = $fileRemovalResult.FailedCount
             DirectoriesFailed       = $dirRemovalResult.FailedCount
-            BytesFreed              = $totalBytes
+            BytesFreed              = $bytesFreed
             DurationMs              = $stopwatch.ElapsedMilliseconds
             Items                   = $allRecords
         } | ConvertTo-Json -Depth 5
@@ -1349,13 +1383,13 @@ try {
         if ($WhatIfPreference) {
             Write-Summary ('{0}: {1}' -f ('Files would be {0}'       -f $removedLabel).PadRight(29), $filesToDelete.Count)
             Write-Summary ('{0}: {1}' -f ('Directories would be {0}' -f $removedLabel).PadRight(29), $dirsToDelete.Count)
-            Write-Summary ('{0}: {1}' -f 'Space would free'.PadRight(29), (Format-ByteSize $totalBytes))
+            Write-Summary ('{0}: {1}' -f 'Space to free'.PadRight(29), (Format-ByteSize $totalBytes))
             Write-Summary ('{0}: {1}' -f 'Duration'.PadRight(29), (Format-Duration $stopwatch.ElapsedMilliseconds))
         }
         else {
             Write-Summary ('{0}: {1}' -f ('Files {0}'       -f $removedLabel).PadRight(20), $fileRemovalResult.DeletedCount)
             Write-Summary ('{0}: {1}' -f ('Directories {0}' -f $removedLabel).PadRight(20), $dirRemovalResult.DeletedCount)
-            Write-Summary ('{0}: {1}' -f 'Space freed'.PadRight(20), (Format-ByteSize $totalBytes))
+            Write-Summary ('{0}: {1}' -f 'Space freed'.PadRight(20), (Format-ByteSize $bytesFreed))
             Write-Summary ('{0}: {1}' -f 'Duration'.PadRight(20), (Format-Duration $stopwatch.ElapsedMilliseconds))
 
             if ($totalFailed -gt 0) {

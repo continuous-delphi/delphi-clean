@@ -4,6 +4,11 @@ All notable changes to this project will be documented in this file.
 
 ---
 
+## [0.11.0] Unreleased
+
+- Fix powershell (5.1) usage for recycle bin option
+
+
 ## [0.10.0] 2026-04-04
 
 - Add JSON configuration file hierarchy
