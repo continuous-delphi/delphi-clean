@@ -4,7 +4,7 @@ All notable changes to this project will be documented in this file.
 
 ---
 
-## [0.12.0] Unreleased
+## [0.12.0] 2026-04-23
 
 - Add `WinARM64EC` to list of directories in Standard cleanup level
 for Delphi 13.  [#12](https://github.com/continuous-delphi/delphi-clean/issues/23)

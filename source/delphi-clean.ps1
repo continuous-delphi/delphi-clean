@@ -206,7 +206,7 @@ param(
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 
-$script:ToolVersion        = '0.11.0'
+$script:ToolVersion        = '0.12.0'
 
 $script:OutputLevel        = $OutputLevel
 $script:BuiltInExcludeDirs = @('.git', '.vs', '.claude')
