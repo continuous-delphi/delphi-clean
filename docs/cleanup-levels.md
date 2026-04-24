@@ -63,6 +63,7 @@ Includes everything in `basic, plus the following additional items.
 
 - `Win32`
 - `Win64`
+- `WinARM64EC`
 - `Debug`
 - `Release`
 - `OSX64`

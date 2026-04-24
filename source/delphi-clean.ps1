@@ -805,6 +805,7 @@ function Get-LevelDefinition {
     $standardDirsExtra = @(
         'Win32',
         'Win64',
+        'WinARM64EC',
         'Debug',
         'Release',
         'OSX64',
