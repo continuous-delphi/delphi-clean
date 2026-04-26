@@ -66,6 +66,14 @@ Describe 'delphi-clean.ps1 integration tests' {
     @($result.Items).Count | Should -BeGreaterThan 0
   }
 
+  It 'suppresses WhatIf host output in JSON mode' {
+    $output = @(& $script:ToolPath -RootPath $script:TempRoot -Level standard -Json -WhatIf *>&1)
+
+    $output.Count | Should -Be 1
+    [string]$output[0] | Should -Not -Match '^What if:'
+    { [string]$output[0] | ConvertFrom-Json } | Should -Not -Throw
+  }
+
   It 'JSON output includes DurationMs as a non-negative integer' {
     $jsonText = & $script:ToolPath -RootPath $script:TempRoot -Level standard -Json -WhatIf
     $result = $jsonText | ConvertFrom-Json

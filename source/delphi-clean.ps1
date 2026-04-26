@@ -975,7 +975,8 @@ function Remove-FileList {
     param(
         [System.IO.FileInfo[]]$Files = @(),
         [switch]$ReturnRecords,
-        [switch]$RecycleBin
+        [switch]$RecycleBin,
+        [switch]$SuppressWhatIfOutput
     )
 
     $result = [PSCustomObject]@{
@@ -994,6 +995,14 @@ function Remove-FileList {
 
     foreach ($file in $Files) {
         Write-Verbose "Evaluating file: $($file.FullName)"
+
+        if ($WhatIfPreference -and $SuppressWhatIfOutput) {
+            Write-Detail "Would $($action.ToLower()): $($file.FullName)"
+            if ($ReturnRecords) {
+                $result.Records.Add((ConvertTo-DeletionRecord -Type File -Path $file.FullName -Deleted $false -Size $file.Length))
+            }
+            continue
+        }
 
         if ($PSCmdlet.ShouldProcess($file.FullName, $action)) {
             try {
@@ -1036,7 +1045,8 @@ function Remove-DirectoryList {
     param(
         [System.IO.DirectoryInfo[]]$Directories = @(),
         [switch]$ReturnRecords,
-        [switch]$RecycleBin
+        [switch]$RecycleBin,
+        [switch]$SuppressWhatIfOutput
     )
 
     $result = [PSCustomObject]@{
@@ -1062,6 +1072,14 @@ function Remove-DirectoryList {
 
         # Compute size before any deletion so it is available for the record regardless of outcome
         $dirSize = Get-TreeSize -Path $dir.FullName
+
+        if ($WhatIfPreference -and $SuppressWhatIfOutput) {
+            Write-Detail "Would $($action.ToLower()): $($dir.FullName)"
+            if ($ReturnRecords) {
+                $result.Records.Add((ConvertTo-DeletionRecord -Type Directory -Path $dir.FullName -Deleted $false -Size $dirSize))
+            }
+            continue
+        }
 
         if ($PSCmdlet.ShouldProcess($dir.FullName, $action)) {
             try {
@@ -1344,9 +1362,9 @@ try {
     # Normal clean path
     Write-Section 'Cleaning'
     if (-not $Json) { Write-Progress -Activity 'delphi-clean' -Status "Removing $($filesToDelete.Count) files..." }
-    $fileRemovalResult = Remove-FileList      -Files $filesToDelete       -ReturnRecords:$returnRecords -RecycleBin:$RecycleBin
+    $fileRemovalResult = Remove-FileList      -Files $filesToDelete       -ReturnRecords:$returnRecords -RecycleBin:$RecycleBin -SuppressWhatIfOutput:$Json
     if (-not $Json) { Write-Progress -Activity 'delphi-clean' -Status "Removing $($dirsToDelete.Count) directories..." }
-    $dirRemovalResult  = Remove-DirectoryList -Directories $dirsToDelete  -ReturnRecords:$returnRecords -RecycleBin:$RecycleBin
+    $dirRemovalResult  = Remove-DirectoryList -Directories $dirsToDelete  -ReturnRecords:$returnRecords -RecycleBin:$RecycleBin -SuppressWhatIfOutput:$Json
     if (-not $Json) { Write-Progress -Activity 'delphi-clean' -Completed }
 
     $allRecords = New-Object System.Collections.Generic.List[object]

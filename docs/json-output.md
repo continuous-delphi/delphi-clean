@@ -16,7 +16,7 @@ This object is returned after a scan, whether or not files are deleted.
   "Root": "C:/code/myproject",
   "ExcludeDirectoryPattern": [".git", ".vs", ".claude"],
   "IncludeFilePattern": [],
-  "Mode": "Clean",
+  "Mode": "Execute",
   "Disposition": "Permanent",
   "RecycleBin": false,
   "Check": false,
@@ -43,7 +43,7 @@ This object is returned after a scan, whether or not files are deleted.
 | `Root` | string | Absolute path of the scanned root directory |
 | `ExcludeDirectoryPattern` | string array | Combined list of built-in and user-supplied exclusion patterns |
 | `IncludeFilePattern` | string array | Additional file patterns supplied via config or `-IncludeFilePattern` |
-| `Mode` | string | `Clean`, `WhatIf`, or `Check` |
+| `Mode` | string | `Execute`, `WhatIf (no changes)`, or `Check (no changes)` |
 | `Disposition` | string | `Permanent` or `Recycle Bin` |
 | `RecycleBin` | boolean | Whether `-RecycleBin` was active |
 | `Check` | boolean | Whether `-Check` was active |
@@ -73,9 +73,9 @@ during the scan.
 
 | Value | When set |
 |-------|----------|
-| `Clean` | Normal run -- items are deleted (or recycled) |
-| `WhatIf` | `-WhatIf` was supplied -- scan only, no deletions |
-| `Check` | `-Check` was supplied -- scan only, no deletions |
+| `Execute` | Normal run -- items are deleted (or recycled) |
+| `WhatIf (no changes)` | `-WhatIf` was supplied -- scan only, no deletions |
+| `Check (no changes)` | `-Check` was supplied -- scan only, no deletions |
 
 ---
 
@@ -90,7 +90,7 @@ with zeroed counters and an empty `Items` array.
   "Root": "C:/code/myproject",
   "ExcludeDirectoryPattern": [".git", ".vs", ".claude"],
   "IncludeFilePattern": [],
-  "Mode": "Clean",
+  "Mode": "Execute",
   "Disposition": "Permanent",
   "RecycleBin": false,
   "Check": false,

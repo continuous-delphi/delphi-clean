@@ -4,10 +4,17 @@ All notable changes to this project will be documented in this file.
 
 ---
 
+## [Unreleased]
+
+- Fix `-Json -WhatIf` so PowerShell WhatIf host messages are suppressed and
+  standard output remains a single JSON object
+- Update JSON output documentation to match the current `Mode` values emitted
+  by the script: `Execute`, `WhatIf (no changes)`, and `Check (no changes)`
+
 ## [0.12.0] 2026-04-23
 
 - Add `WinARM64EC` to list of directories in Standard cleanup level
-for Delphi 13.  [#12](https://github.com/continuous-delphi/delphi-clean/issues/23)
+for Delphi 13.  [#23](https://github.com/continuous-delphi/delphi-clean/issues/23)
 
 ## [0.11.0] 2026-04-23
 
