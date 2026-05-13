@@ -4,7 +4,7 @@ All notable changes to this project will be documented in this file.
 
 ---
 
-## [Unreleased]
+## [1.0.0] 2026-05-13
 
 - Fix `-Json -WhatIf` so PowerShell WhatIf host messages are suppressed and
   standard output remains a single JSON object
