@@ -1,2 +1,3 @@
 # PowerShell test output
 tests/pwsh/results/*.xml
+tools/delphi-logger/**/debug.log

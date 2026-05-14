@@ -3,6 +3,10 @@
 All notable changes to this project will be documented in this file.
 
 ---
+## [1.1.0] - 2026-05-14
+
+- Support for `delphi-logger` added (opt-in structural logging for debug
+purposes.) [#30](https://github.com/continuous-delphi/delphi-clean/issues/30)
 
 ## [1.0.0] 2026-05-13
 
