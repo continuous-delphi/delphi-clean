@@ -3,6 +3,10 @@
 All notable changes to this project will be documented in this file.
 
 ---
+## [1.1.1] - 2026-05-16
+
+- Comment/notes cleanup only
+
 ## [1.1.0] - 2026-05-14
 
 - Support for `delphi-logger` added (opt-in structural logging for debug
@@ -134,7 +138,7 @@ single `ExcludeDirectoryPattern` parameter
 
 ## [0.1.0] 2026-03-19
 
-- Initial release of `delphi-clean- utility
+- Initial release of `delphi-clean` utility
 - Three different cleanup levels
 - Dry-run / WhatIf mode
 - ExcludeDirectories option

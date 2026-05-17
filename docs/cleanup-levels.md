@@ -32,7 +32,7 @@ Safe cleanup of common transient files.
 
 ## LEVEL=`standard`
 
-Includes everything in `basic, plus the following additional items.
+Includes everything in `basic`, plus the following additional items.
 
 ### Additional Files
 

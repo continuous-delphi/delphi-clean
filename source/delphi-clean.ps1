@@ -180,7 +180,7 @@ param(
     [Parameter(ParameterSetName = 'Clean')]
     [switch]$RecycleBin,
 
-    # Audit mode: scan only, never deletes. Exit 0 = nothing found, 2 = artifacts found.
+    # Audit mode: scan only, never deletes. Exit 0 = nothing found, 1 = artifacts found.
     # Cannot be combined with -WhatIf.
     [Parameter(ParameterSetName = 'Clean')]
     [switch]$Check,
@@ -206,7 +206,7 @@ param(
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 
-$script:ToolVersion        = '1.1.0'
+$script:ToolVersion        = '1.1.1'
 
 # BEGIN-CD-HOSTLOG
 # -----------------------------------------------------------------------------

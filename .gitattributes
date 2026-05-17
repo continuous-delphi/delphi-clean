@@ -1,6 +1,6 @@
 # .gitattributes
 #
-# Line ending policy for delphi-compiler-versions
+# Line ending policy for delphi-clean
 # note to self
 #   git add --renormalize .
 #   git commit -m "chore: enforce CRLF for .inc via .gitattributes"
