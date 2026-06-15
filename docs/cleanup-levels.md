@@ -20,7 +20,6 @@ Safe cleanup of common transient files.
 - `*.identcache`
 - `*.bak`
 - `*.tmp`
-- `*.dsk`
 - `*.tvsconfig`
 - `*.stat`
 
@@ -88,6 +87,7 @@ Includes everything in `standard`, plus the following additional items.
 - `*.dproj.local`
 - `*.groupproj.local`
 - `*.projdata`
+- `*.dsk`
 - `*.~*`
 - `*.lib`
 - `*.fbpInf`

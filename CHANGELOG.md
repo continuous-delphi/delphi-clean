@@ -3,6 +3,12 @@
 All notable changes to this project will be documented in this file.
 
 ---
+## [1.3.0] - 2026-06-14
+
+- Move `*.dsk` (desktop layout files) from `basic` to `deep` cleanup level
+  to match project-level local files
+[#31](https://github.com/continuous-delphi/delphi-clean/issues/31)
+
 ## [1.2.0] - 2026-05-18
 
 - Reverted delphi-logger changes. Reconsidering as noise greater than value

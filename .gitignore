@@ -1,2 +1,12 @@
 # PowerShell test output
 tests/pwsh/results/*.xml
+
+.claude/*
+*.log
+*.env
+*.json
+*.html
+*.xml
+*.info
+*.txt
+*.bat
